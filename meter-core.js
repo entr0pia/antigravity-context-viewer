@@ -33,8 +33,14 @@
       tps = Number((output / duration).toFixed(1));
     }
     let streamingTps = null;
-    if (output && streamingSec && streamingSec > 0.05) {
-      streamingTps = Number((output / streamingSec).toFixed(1));
+    if (output) {
+      // 防抖过滤：流式持续时间需满足最小有效时间窗 (≥ 0.25s) 且输出 ≥ 5 tokens，
+      // 若低于 0.25s 则属于单包瞬时返回，除以微小时间会产生数千虚高值，此时回退到综合耗时 (output / duration)
+      if (streamingSec && streamingSec >= 0.25 && output >= 5) {
+        streamingTps = Number((output / streamingSec).toFixed(1));
+      } else if (duration && duration > 0) {
+        streamingTps = tps;
+      }
     }
     const speed = (tps !== null || duration !== null || output !== null) ? {
       tps,

@@ -284,8 +284,8 @@
     }
     .token-fire-dot{
       width:6px;height:6px;border-radius:50%;
-      background:var(--ag-custom-token-accent,var(--ag-token-accent-default));
-      flex-shrink:0;opacity:0.9;
+      background:var(--ag-custom-token-today,#0284c7);
+      flex-shrink:0;opacity:0.95;
     }
     #token-amount{
       font-variant-numeric:tabular-nums;
@@ -537,7 +537,7 @@
     .key-stat-label{font-size:10px;color:var(--ag-text-muted);margin-bottom:2px}
     .key-stat-val{font-size:12px;font-weight:600;color:var(--ag-text-primary);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #key-used{color:var(--ag-custom-context-text,var(--ag-text-primary))}
-    .key-takeaway{font-size:11px;color:var(--ag-text-secondary);padding-top:6px;border-top:1px solid var(--ag-border-subcard);line-height:1.4}
+    .key-takeaway{display:none !important}
 
     #status{padding:7px 10px;border:0;border-left:2.5px solid var(--tone,#666);border-radius:4px;background:var(--ag-bg-status);color:var(--ag-text-status);font-weight:500;font-size:11.5px}
     #model{overflow-wrap:anywhere;font-size:11.5px;color:var(--ag-text-muted)}
@@ -562,7 +562,7 @@
     .t-card-val{font-size:16.5px;font-weight:700;color:var(--ag-text-primary);letter-spacing:-0.3px;font-variant-numeric:tabular-nums}
     #t-total-val{color:var(--ag-custom-token-total,var(--ag-text-primary))}
     #t-today-val{color:var(--ag-custom-token-accent,var(--ag-text-primary))}
-    .t-card-sub{font-size:10px;color:var(--ag-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .t-card-sub{display:none !important}
 
     .heatmap-section{background:var(--ag-heat-bg);border:1px solid var(--ag-border-card);border-radius:10px;padding:12px}
     .heat-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
@@ -737,7 +737,7 @@
   <section id="panel" class="ag-panel" hidden aria-label="会话与上下文详情">
     <div class="panel-header-bar">
       <div class="panel-title">
-        <span style="font-size:13px;font-weight:600;color:var(--ag-text-primary)">💬 当前会话上下文</span>
+        <span style="font-size:13px;font-weight:600;color:var(--ag-text-primary)">会话用量与生成监控<span id="v">v2.7</span></span>
       </div>
       <div class="panel-header-actions">
         <button id="theme-toggle" class="panel-icon-btn" type="button" aria-label="切换浅色/深色主题" title="当前：跟随IDE（点击切换：浅色 / 深色 / 自动）">🌓</button>
@@ -746,16 +746,14 @@
     </div>
 
     <div id="view-context">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <h3 style="margin:0">会话用量与生成监控<span id="v">v2.7</span></h3>
-      </div>
+      
 
       <!-- 卡片 1: 核心用量速览 -->
       <div id="key-summary">
         <div class="key-header"><span class="key-title">⭐ 核心用量速览</span><span id="key-badge" class="key-pill pill-muted">读取中</span></div>
         <div class="key-bar-track"><div id="key-bar-fill" class="key-bar-fill"></div></div>
         <div class="key-stats"><div class="key-stat"><div class="key-stat-label">当前已用</div><div id="key-used" class="key-stat-val">—</div></div><div class="key-stat"><div class="key-stat-label">预算上限</div><div id="key-limit" class="key-stat-val">—</div></div><div class="key-stat"><div class="key-stat-label">剩余可用</div><div id="key-remaining" class="key-stat-val">—</div></div></div>
-        <div id="key-takeaway" class="key-takeaway">正在计算核心指标…</div>
+        <div id="key-takeaway" class="key-takeaway" style="display:none"></div>
       </div>
 
       <!-- 卡片 2: 输出速度与延迟速览 -->
@@ -778,18 +776,18 @@
             <div id="speed-ttft" class="key-stat-val">—</div>
           </div>
           <div class="key-stat">
-            <div class="key-stat-label">本次输出</div>
+            <div class="key-stat-label">缓存率</div>
             <div id="speed-tokens" class="key-stat-val">—</div>
           </div>
         </div>
-        <div id="speed-takeaway" class="key-takeaway">等待首次模型输出产生速度统计…</div>
+        <div id="speed-takeaway" class="key-takeaway" style="display:none"></div>
       </div>
 
       <!-- 二级交互折叠区 1: 面板背景与指标颜色自定义（就近放置于面板 B 内部） -->
       <div class="tech-drawer">
         <button id="btn-toggle-colors" class="drawer-trigger" aria-expanded="false" type="button">
-          <span class="drawer-trigger-left"><span>🎨 指标与背景颜色自定义（默认跟随主题）</span></span>
-          <span id="color-drawer-arrow" class="drawer-arrow">▼ 展开设置</span>
+          <span class="drawer-trigger-left"><span>🎨 指标与背景颜色自定义</span></span>
+          <span id="color-drawer-arrow" class="drawer-arrow">▼</span>
         </button>
         <div id="color-drawer-body" class="drawer-body" style="display:none;">
           <div class="color-grid">
@@ -863,7 +861,7 @@
           <span class="drawer-trigger-left">
             <span>📋 底层技术参数与附件审计</span>
           </span>
-          <span id="drawer-arrow" class="drawer-arrow">▼ 点击展开明细</span>
+          <span id="drawer-arrow" class="drawer-arrow">▼</span>
         </button>
         <div id="drawer-body" class="drawer-body" style="display:none;">
           <p id="status">正在核对请求和附件…</p><p id="model"></p>
@@ -894,24 +892,24 @@
     <div id="view-tokens">
       <div class="token-stat-cards">
         <div class="t-card">
-          <div class="t-card-lbl"><span>全量累计</span><span style="color:var(--ag-custom-token-accent,var(--ag-token-accent-default))">Total</span></div>
-          <div class="t-card-val" id="t-total-val">--</div>
-          <div class="t-card-sub" id="t-total-sub">读取中...</div>
-        </div>
-        <div class="t-card">
           <div class="t-card-lbl"><span>今日使用</span><span style="color:var(--ag-custom-token-accent,#0284c7)">Today</span></div>
           <div class="t-card-val" id="t-today-val">--</div>
-          <div class="t-card-sub" id="t-today-sub">读取中...</div>
+          <div class="t-card-sub" id="t-today-sub" style="display:none"></div>
         </div>
         <div class="t-card">
           <div class="t-card-lbl"><span>本月使用</span><span style="color:var(--ag-custom-token-accent,var(--ag-token-accent-default))">Month</span></div>
           <div class="t-card-val" id="t-month-val">--</div>
-          <div class="t-card-sub" id="t-month-sub">读取中...</div>
+          <div class="t-card-sub" id="t-month-sub" style="display:none"></div>
         </div>
         <div class="t-card">
           <div class="t-card-lbl"><span>年度使用</span><span style="color:var(--ag-custom-token-accent,var(--ag-token-accent-default))">Year</span></div>
           <div class="t-card-val" id="t-year-val">--</div>
-          <div class="t-card-sub" id="t-year-sub">读取中...</div>
+          <div class="t-card-sub" id="t-year-sub" style="display:none"></div>
+        </div>
+        <div class="t-card">
+          <div class="t-card-lbl"><span>全量累计</span><span style="color:var(--ag-custom-token-accent,var(--ag-token-accent-default))">Total</span></div>
+          <div class="t-card-val" id="t-total-val">--</div>
+          <div class="t-card-sub" id="t-total-sub" style="display:none"></div>
         </div>
       </div>
 
@@ -942,8 +940,8 @@
             <canvas id="h-cum-canvas"></canvas>
           </div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:11px;color:var(--ag-text-muted);flex-wrap:wrap;gap:6px">
-          <span>点击或悬浮格子查看当日详细 Token 构成</span>
+        <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:10px;font-size:11px;color:var(--ag-text-muted);flex-wrap:wrap;gap:6px">
+          
           <div style="display:flex;align-items:center;gap:6px">
             <div id="heat-legend-scale" style="display:flex;align-items:center;gap:4px;cursor:pointer" title="点击任一色块单独修改该档位颜色，或点击文字展开设置">
               <span>少</span>
@@ -961,8 +959,8 @@
       <!-- 二级交互折叠区（就近放置于面板 A 内部）：面板背景色 + 热力图 5 档色阶预设、5 档逐格独立自定义与两端插值自定义 -->
       <div class="tech-drawer" style="margin-top:2px">
         <button id="btn-toggle-token-colors" class="drawer-trigger" aria-expanded="false" type="button">
-          <span class="drawer-trigger-left"><span>🎨 热力图色阶与面板外观自定义（默认跟随主题）</span></span>
-          <span id="token-color-drawer-arrow" class="drawer-arrow">▼ 展开设置</span>
+          <span class="drawer-trigger-left"><span>🎨 热力图色阶与面板外观自定义</span></span>
+          <span id="token-color-drawer-arrow" class="drawer-arrow">▼</span>
         </button>
         <div id="token-color-drawer-body" class="drawer-body" style="display:none;">
           <div class="heat-preset-bar">
@@ -1165,7 +1163,7 @@
     route: null, count: 0, latest: null, requestAt: 0, requestError: '',
     requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0,
     scanError: '', scan: null, generation: 0, controllers: new Set(),
-    disposed: false, layoutMode: 'wide', tooltipOpen: false
+    disposed: false, layoutMode: 'wide', tooltipOpen: false, prevSpeed: null, currSpeed: null, speedHistory: []
   };
   const route = () => location.pathname.match(/^\/c\/([a-f\d-]{36})(?:\/|$)/i)?.[1] || null;
   let activeHeatView = 'daily';
@@ -2652,7 +2650,7 @@
     if (!colorDrawerBody) return;
     const isHidden = colorDrawerBody.style.display === 'none' || !colorDrawerBody.style.display;
     colorDrawerBody.style.display = isHidden ? 'block' : 'none';
-    if (colorDrawerArrow) colorDrawerArrow.textContent = isHidden ? '▲ 收起设置' : '▼ 展开设置';
+    if (colorDrawerArrow) colorDrawerArrow.textContent = isHidden ? '▲' : '▼';
     btnColors.setAttribute('aria-expanded', String(isHidden));
   });
 
@@ -2664,7 +2662,7 @@
     if (!drawerBody) return;
     const isHidden = drawerBody.style.display === 'none' || !drawerBody.style.display;
     drawerBody.style.display = isHidden ? 'block' : 'none';
-    if (drawerArrow) drawerArrow.textContent = isHidden ? '▲ 点击收起明细' : '▼ 点击展开明细';
+    if (drawerArrow) drawerArrow.textContent = isHidden ? '▲' : '▼';
     btnDetails.setAttribute('aria-expanded', String(isHidden));
   });
 
@@ -2677,7 +2675,7 @@
     const curHidden = tokenColorDrawerBody.style.display === 'none' || !tokenColorDrawerBody.style.display;
     const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : curHidden;
     tokenColorDrawerBody.style.display = nextOpen ? 'block' : 'none';
-    if (tokenColorDrawerArrow) tokenColorDrawerArrow.textContent = nextOpen ? '▲ 收起设置' : '▼ 展开设置';
+    if (tokenColorDrawerArrow) tokenColorDrawerArrow.textContent = nextOpen ? '▲' : '▼';
     btnTokenColors?.setAttribute('aria-expanded', String(nextOpen));
   }
   btnTokenColors?.addEventListener('click', () => toggleTokenColorsDrawer());
@@ -2981,9 +2979,11 @@
     const badgeAmt = el('token-amount');
     const badgeExtra = el('token-hover-extra');
     const overAmt = el('overflow-tokens-val');
-    if (badgeAmt) badgeAmt.textContent = fmtCardM(totalTokens);
-    if (badgeExtra) badgeExtra.textContent = `· 今日 ${fmtCardM(shownToday)}`;
-    if (overAmt) overAmt.textContent = fmtCardM(totalTokens);
+    if (badgeAmt) badgeAmt.textContent = fmtCardM(shownToday);
+    if (badgeExtra) badgeExtra.textContent = `· 全量 ${fmtCardM(totalTokens)}`;
+    if (overAmt) overAmt.textContent = fmtCardM(shownToday);
+    const bTokens = el('badge-tokens');
+    if (bTokens) bTokens.title = `今日 Token 用量：${fmtCardM(shownToday)}（全量 ${fmtCardM(totalTokens)}，点击展开详情）`;
 
     const tTotalVal = el('t-total-val');
     const tTotalSub = el('t-total-sub');
@@ -3089,9 +3089,9 @@
           heatPopVal.textContent = item.tokens > 0 ? `${fmtYi(item.tokens)} Tokens` : (item.isFuture ? '未来日期（待产生记录）' : '0 Tokens');
           if (item.rec) {
             heatPopDet.innerHTML = `
-              <div class="pop-det-col"><span class="pop-det-val">Prompt: ${fmtYi(item.rec.input)}</span><span class="pop-det-trans">提示词</span></div>
-              <div class="pop-det-col"><span class="pop-det-val">Output: ${fmtYi(item.rec.output)}</span><span class="pop-det-trans">输出</span></div>
-              <div class="pop-det-col"><span class="pop-det-val">Cache: ${fmtYi(item.rec.cache)}</span><span class="pop-det-trans">缓存</span></div>
+              <div class="pop-det-col"><span class="pop-det-val">Prompt: ${fmtYi(item.rec.input)}</span></div>
+              <div class="pop-det-col"><span class="pop-det-val">Output: ${fmtYi(item.rec.output)}</span></div>
+              <div class="pop-det-col"><span class="pop-det-val">Cache: ${fmtYi(item.rec.cache)}</span></div>
             `.trim();
             heatPopDet.style.display = 'flex';
           } else {
@@ -3376,15 +3376,59 @@
     if (state.tooltipOpen) positionContextTooltip();
   }
 
+  const formatTokenKM = v => {
+    if (v == null) return '—';
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return '0';
+    if (n >= 1e9) return `${parseFloat((n / 1e9).toFixed(2))}B`;
+    if (n >= 1e6) return `${parseFloat((n / 1e6).toFixed(2))}M`;
+    if (n >= 1e3) return `${parseFloat((n / 1e3).toFixed(1))}K`;
+    return String(Math.round(n));
+  };
+
+  function getRawStreamingTps(sp) {
+    if (!sp) return null;
+    return sp.streamingTps != null ? sp.streamingTps : (sp.tps != null ? sp.tps : null);
+  }
+
+  function getEffectiveTps(sp, prevSp = state.prevSpeed) {
+    if (!sp) return null;
+    const currRaw = getRawStreamingTps(sp);
+    if (currRaw == null || !Number.isFinite(currRaw)) return null;
+    const prevRaw = getRawStreamingTps(prevSp);
+    if (prevRaw != null && Number.isFinite(prevRaw)) {
+      return Number((0.6 * currRaw + 0.4 * prevRaw).toFixed(1));
+    }
+    return currRaw;
+  }
+
+  function formatTps(val) {
+    if (val == null) return '—';
+    const n = Number(val);
+    if (!Number.isFinite(n) || n <= 0) return '0';
+    if (n >= 1000) return String(Math.round(n));
+    return n.toPrecision(3);
+  }
+
+  function getPanelSpeedTooltipText(sp, prevSp) {
+    const currRaw = getRawStreamingTps(sp);
+    const prevRaw = getRawStreamingTps(prevSp);
+    const line1 = `本轮：${currRaw != null ? `${formatTps(currRaw)} tok/s` : '—'}`;
+    const line2 = `上轮：${prevRaw != null ? `${formatTps(prevRaw)} tok/s` : '—'}`;
+    return `${line1}\n${line2}`;
+  }
+
   function syncSpeedBadgeText() {
     const sp = state.latest?.speed;
     const speedAmount = el('speed-amount');
     const overflowSpeedVal = el('overflow-speed-val');
     if (!speedAmount) return;
     const isCompact = state.layoutMode === 'compact';
-    if (sp?.tps != null) {
-      speedAmount.textContent = isCompact ? `${sp.tps}` : `${sp.tps} tok/s`;
-      if (overflowSpeedVal) overflowSpeedVal.textContent = `${sp.tps} tok/s`;
+    const effectiveTps = getEffectiveTps(sp, state.prevSpeed);
+    if (effectiveTps != null) {
+      const formatted = formatTps(effectiveTps);
+      speedAmount.textContent = isCompact ? formatted : `${formatted} tok/s`;
+      if (overflowSpeedVal) overflowSpeedVal.textContent = `${formatted} tok/s`;
     } else if (state.requestBusy) {
       speedAmount.textContent = isCompact ? '…' : '计算中…';
       if (overflowSpeedVal) overflowSpeedVal.textContent = '计算中…';
@@ -3463,7 +3507,8 @@
         if (speedHoverExtra) {
           speedHoverExtra.textContent = `${sp.duration ? ` · ${sp.duration}s` : ''}${sp.outputTokens ? ` · ${short(sp.outputTokens)} tok` : ''}`;
         }
-        speedBadge.title = `最新模型输出速度：${sp.tps} tok/s${sp.streamingTps ? ` (流式 ${sp.streamingTps} tok/s)` : ''}\n总耗时：${sp.duration || '—'}s (首字 ${sp.ttft || '—'}s + 流式 ${sp.streamingSec || '—'}s)\n本次产出：${fmt(sp.outputTokens)} tokens`;
+        const effectiveTps = getEffectiveTps(sp, state.prevSpeed);
+        speedBadge.title = `最新纯流式输出速度：${formatTps(effectiveTps)} tok/s\n耗时：流式 ${sp.streamingSec || '—'}s + 首字 ${sp.ttft || '—'}s (总计 ${sp.duration || '—'}s)\n本次产出：${formatTokenKM(sp.outputTokens)} tokens`;
       } else if (state.requestBusy) {
         if (speedHoverExtra) speedHoverExtra.textContent = '';
         speedBadge.title = '正在等待模型返回或计算生成指标…';
@@ -3534,21 +3579,54 @@
       const spTokens = el('speed-tokens');
       const spTakeaway = el('speed-takeaway');
 
-      if (sp?.tps != null) {
+      const effectiveTps = getEffectiveTps(sp);
+
+      if (effectiveTps != null) {
         if (spBadge) {
-          if (sp.tps >= 80) { spBadge.textContent = '极速'; spBadge.className = 'key-pill pill-good'; }
-          else if (sp.tps >= 35) { spBadge.textContent = '流畅'; spBadge.className = 'key-pill pill-good'; }
-          else if (sp.tps >= 15) { spBadge.textContent = '良好'; spBadge.className = 'key-pill pill-warn'; }
-          else { spBadge.textContent = '偏慢'; spBadge.className = 'key-pill pill-danger'; }
+          const isFlash = /flash/i.test(d?.model || '');
+          const tUltra = isFlash ? 400 : 200;
+          const tFast  = isFlash ? 200 : 100;
+          const tGood  = isFlash ? 100 : 50;
+
+          if (effectiveTps >= tUltra) {
+            spBadge.textContent = '极速';
+            spBadge.className = 'key-pill pill-good';
+          } else if (effectiveTps >= tFast) {
+            spBadge.textContent = '流畅';
+            spBadge.className = 'key-pill pill-good';
+          } else if (effectiveTps >= tGood) {
+            spBadge.textContent = '良好';
+            spBadge.className = 'key-pill pill-warn';
+          } else {
+            spBadge.textContent = '偏慢';
+            spBadge.className = 'key-pill pill-danger';
+          }
         }
-        if (spVal) spVal.textContent = `${sp.tps} tok/s`;
+        const panelSpeedTip = getPanelSpeedTooltipText(sp, state.prevSpeed);
+        if (spVal) {
+          spVal.textContent = `${formatTps(effectiveTps)} tok/s`;
+          spVal.title = panelSpeedTip;
+        }
+        if (spBadge) spBadge.title = panelSpeedTip;
         if (spDur) spDur.textContent = sp.duration ? `${sp.duration}s` : '—';
         if (spTtft) spTtft.textContent = sp.ttft ? `${sp.ttft}s` : '—';
-        if (spTokens) spTokens.textContent = `${fmt(sp.outputTokens)} tok`;
+        if (spTokens) {
+          if (d?.input && d.input > 0 && d?.cached != null) {
+            const cacheRate = (d.cached / d.input) * 100;
+            spTokens.textContent = cacheRate <= 0 ? '0%' : (cacheRate >= 99.95 ? '100%' : `${cacheRate.toFixed(1)}%`);
+            spTokens.title = `缓存命中：${formatTokenKM(d.cached)} tokens\n总输入：${formatTokenKM(d.input)} tokens`;
+          } else if (d?.input != null) {
+            spTokens.textContent = '0%';
+            spTokens.title = `缓存命中：0 tokens\n总输入：${formatTokenKM(d.input)} tokens`;
+          } else {
+            spTokens.textContent = '—';
+          }
+        }
         if (spTakeaway) {
+          const isFlash = /flash/i.test(d?.model || '');
           const modelStr = d?.model ? `（${d.model}）` : '';
-          const streamInfo = sp.streamingTps ? `，纯流式传输达 ${sp.streamingTps} tok/s` : '';
-          spTakeaway.textContent = `✔ 输出${sp.tps >= 35 ? '流畅' : '平稳'}（${sp.tps} tok/s${streamInfo}），总耗时 ${sp.duration}s 内生成 ${fmt(sp.outputTokens)} tokens${modelStr}。`;
+          const streamInfo = sp.streamingTps ? `，纯流式传输达 ${formatTps(sp.streamingTps)} tok/s` : '';
+          spTakeaway.textContent = `✔ 纯流式输出${effectiveTps >= (isFlash ? 200 : 100) ? '流畅' : '平稳'}（${formatTps(effectiveTps)} tok/s${streamInfo}），总耗时 ${sp.duration}s 内生成 ${fmt(sp.outputTokens)} tokens${modelStr}。`;
         }
       } else {
         if (spBadge) { spBadge.textContent = state.requestBusy ? '计算中' : '待生成'; spBadge.className = 'key-pill pill-muted'; }
@@ -3585,13 +3663,33 @@
     const timeout = setTimeout(() => controller.abort(), 12000);
     try {
       const csrf = window.__APP_CONFIG__?.csrfToken; if (!csrf) throw new Error('后台尚未就绪');
-      const offset = Math.max(0, state.count - 3);
+      const offset = Math.max(0, state.count - 10);
       const response = await fetch('/exa.language_server_pb.LanguageServerService/GetCascadeTrajectoryGeneratorMetadata', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Connect-Protocol-Version': '1', 'x-codeium-csrf-token': csrf }, body: JSON.stringify({ cascadeId: id, generatorMetadataOffset: offset, includeMessages: false }), signal: controller.signal });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json(); if (generation !== state.generation || state.disposed) return;
       const rows = data.generatorMetadata || [];
       state.count = rows.length ? offset + rows.length : 0;
-      for (let i = rows.length - 1; i >= 0; i--) { const value = summarize(rows[i]); if (value) { state.latest = withStepError(value, rows[i]); break; } }
+      state.speedHistory = state.speedHistory || [];
+      for (let i = 0; i < rows.length; i++) {
+        const value = summarize(rows[i]);
+        if (value) {
+          state.latest = withStepError(value, rows[i]);
+          if (value.speed?.streamingTps != null || value.speed?.tps != null) {
+            const sp = value.speed;
+            const spKey = `${sp.outputTokens}_${sp.duration}_${sp.streamingSec}_${sp.ttft}`;
+            const existingIdx = state.speedHistory.findIndex(s => s._spKey === spKey);
+            if (existingIdx !== -1) {
+              state.speedHistory[existingIdx] = { ...sp, _spKey: spKey };
+            } else {
+              state.speedHistory.push({ ...sp, _spKey: spKey });
+            }
+          }
+        }
+      }
+      if (state.speedHistory.length > 0) {
+        state.currSpeed = state.speedHistory[state.speedHistory.length - 1];
+        state.prevSpeed = state.speedHistory.length > 1 ? state.speedHistory[state.speedHistory.length - 2] : null;
+      }
       state.requestAt = Date.now(); state.requestError = '';
     } catch (e) { if (generation === state.generation && !state.disposed) state.requestError = e.name === 'AbortError' ? '读取超时' : e.message; }
     finally { clearTimeout(timeout); state.controllers.delete(controller); if (generation === state.generation && !state.disposed) { state.requestBusy = false; state.requestNext = Date.now() + (document.hidden ? 15000 : 3000); render(); } }
@@ -3623,7 +3721,7 @@
     const id = route();
     if (id !== state.route) {
       for (const controller of state.controllers) controller.abort(); state.controllers.clear(); state.generation++;
-      Object.assign(state, { route: id, count: 0, latest: null, requestAt: 0, requestError: '', requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanError: '', scan: null }); toggle(false); hideContextTooltip(); renderFiles(null); render();
+      Object.assign(state, { route: id, count: 0, latest: null, requestAt: 0, requestError: '', requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanError: '', scan: null, prevSpeed: null, currSpeed: null, speedHistory: [] }); toggle(false); hideContextTooltip(); renderFiles(null); render();
       void syncTokenHistoryFromHost(true);
     }
     if (id && !state.requestBusy && Date.now() >= state.requestNext) void requestPoll(state.generation, id);

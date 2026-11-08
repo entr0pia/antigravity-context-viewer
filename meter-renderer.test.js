@@ -123,16 +123,44 @@ test('speed badge and speed summary card accurately render model output speed an
     chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 256000 } }
   }));
   await h.flush();
-  assert.equal(h.elements.get('speed-amount').textContent, '112.1 tok/s');
+  assert.equal(h.elements.get('speed-amount').textContent, '185 tok/s');
   assert.match(h.elements.get('speed-hover-extra').textContent, /21\.3s/);
-  assert.match(h.elements.get('badge-speed').title, /112\.1 tok\/s/);
-  assert.equal(h.elements.get('speed-val').textContent, '112.1 tok/s');
+  assert.match(h.elements.get('badge-speed').title, /185 tok\/s/);
+  assert.equal(h.elements.get('speed-val').textContent, '185 tok/s');
   assert.equal(h.elements.get('speed-duration').textContent, '21.3s');
   assert.equal(h.elements.get('speed-ttft').textContent, '8.4s');
-  assert.match(h.elements.get('speed-tokens').textContent, /2,388 tok/);
-  assert.equal(h.elements.get('speed-badge').textContent, '极速');
-  assert.match(h.elements.get('speed-takeaway').textContent, /112\.1 tok\/s/);
+  assert.equal(h.elements.get('speed-tokens').textContent, '0%');
+  assert.equal(h.elements.get('speed-badge').textContent, '流畅');
+  assert.match(h.elements.get('speed-takeaway').textContent, /185 tok\/s/);
   h.sandbox.__AGContextMeter.dispose();
+});
+
+test('speed badge correctly differentiates Flash (100/200/400) and other models (50/100/200)', async () => {
+  async function checkTier(model, tokens, sec) {
+    const h = harness(); h.finishScan();
+    h.pending[0].resolve(response({
+      model,
+      streamingDuration: `${sec}s`,
+      usage: { outputTokens: tokens },
+      chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 256000 } }
+    }));
+    await h.flush();
+    const txt = h.elements.get('speed-badge').textContent;
+    h.sandbox.__AGContextMeter.dispose();
+    return txt;
+  }
+
+  // Flash 档位 (100, 200, 400)
+  assert.equal(await checkTier('Gemini 3.8 Flash (High)', 900, 10), '偏慢');  // 90 tok/s < 100
+  assert.equal(await checkTier('Gemini 3.8 Flash', 1500, 10), '良好');        // 150 tok/s (100~200)
+  assert.equal(await checkTier('Gemini 3.8 Flash', 2500, 10), '流畅');        // 250 tok/s (200~400)
+  assert.equal(await checkTier('Gemini 3.8 Flash', 4500, 10), '极速');        // 450 tok/s >= 400
+
+  // 非 Flash 档位除以 2 (50, 100, 200)
+  assert.equal(await checkTier('Claude 3.7 Sonnet', 400, 10), '偏慢');        // 40 tok/s < 50
+  assert.equal(await checkTier('Claude 3.7 Sonnet', 800, 10), '良好');        // 80 tok/s (50~100)
+  assert.equal(await checkTier('Claude 3.7 Sonnet', 1500, 10), '流畅');       // 150 tok/s (100~200)
+  assert.equal(await checkTier('Claude 3.7 Sonnet', 2500, 10), '极速');       // 250 tok/s >= 200
 });
 test('drawer toggle controls secondary technical details visibility', () => {
   const h = harness();
@@ -143,10 +171,10 @@ test('drawer toggle controls secondary technical details visibility', () => {
   assert.ok(body);
   btn.click();
   assert.equal(body.style.display, 'block');
-  assert.equal(arrow.textContent, '▲ 点击收起明细');
+  assert.equal(arrow.textContent, '▲');
   btn.click();
   assert.equal(body.style.display, 'none');
-  assert.equal(arrow.textContent, '▼ 点击展开明细');
+  assert.equal(arrow.textContent, '▼');
   h.sandbox.__AGContextMeter.dispose();
 });
 test('decoupled dual panels and hover switching between context and tokens', () => {
@@ -528,13 +556,52 @@ test('v5.1: heatmap top-row anti-clipping padding and popover Chinese translatio
   // Value contains 'Tokens' without translation
   assert.match(heatPopVal.textContent, /Tokens$/);
 
-  // Detail section has 3 columns with Chinese translations directly beneath Prompt, Output, Cache
-  assert.match(heatPopDet.innerHTML, /Prompt:[\s\S]*?<span class="pop-det-trans">提示词<\/span>/);
-  assert.match(heatPopDet.innerHTML, /Output:[\s\S]*?<span class="pop-det-trans">输出<\/span>/);
-  assert.match(heatPopDet.innerHTML, /Cache:[\s\S]*?<span class="pop-det-trans">缓存<\/span>/);
+  // Detail section has 3 columns without redundant translation row
+  assert.match(heatPopDet.innerHTML, /Prompt:/);
+  assert.match(heatPopDet.innerHTML, /Output:/);
+  assert.match(heatPopDet.innerHTML, /Cache:/);
+  assert.doesNotMatch(heatPopDet.innerHTML, /pop-det-trans/);
 
   api.dispose();
 });
 
 
 
+
+test('speed smoothing strictly applies formula (curr * 0.6 + prev * 0.4) and displays raw turns in tooltip', async () => {
+  const h = harness(); h.finishScan();
+  const prevTurn = {
+    stepIndex: 1,
+    timeToFirstToken: '1.0s',
+    streamingDuration: '10.0s',
+    usage: { outputTokens: 2006 },
+    chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 256000 } }
+  };
+  const currTurn = {
+    stepIndex: 2,
+    timeToFirstToken: '1.0s',
+    streamingDuration: '10.0s',
+    usage: { outputTokens: 1806 },
+    chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 256000 } }
+  };
+
+  h.pending[0].resolve({
+    ok: true,
+    json: async () => ({
+      generatorMetadata: [
+        { chatModel: prevTurn },
+        { chatModel: currTurn }
+      ]
+    })
+  });
+  await h.flush();
+
+  // 180.6 * 0.6 + 200.6 * 0.4 = 108.36 + 80.24 = 188.6
+  assert.equal(h.elements.get('speed-val').textContent, '189 tok/s');
+  assert.equal(h.elements.get('speed-amount').textContent, '189 tok/s');
+  assert.equal(h.elements.get('speed-val').title, '本轮：181 tok/s\n上轮：201 tok/s');
+  assert.equal(h.elements.get('speed-badge').title, '本轮：181 tok/s\n上轮：201 tok/s');
+  assert.match(h.elements.get('badge-speed').title, /最新纯流式输出速度：189 tok\/s/);
+
+  h.sandbox.__AGContextMeter.dispose();
+});
