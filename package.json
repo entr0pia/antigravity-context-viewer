@@ -18,7 +18,8 @@
     "check": "node cli.js check",
     "restore": "node cli.js restore",
     "uninstall-patch": "node cli.js restore",
-    "test": "node --test meter-core.test.js meter-renderer.test.js",
+    "build": "node scripts/build.js",
+    "test": "node scripts/build.js && node --test tests/meter-core.test.js tests/meter-renderer.test.js",
     "package": "python scripts/package-release.py"
   },
   "keywords": [

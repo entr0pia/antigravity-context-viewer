@@ -1,4 +1,5 @@
-import unittest, os, shutil, zipfile, json, subprocess, pathlib
+import unittest, os, shutil, zipfile, json, subprocess, pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / 'src'))
 from attachment_scan import scan, Counter
 
 ROOT = pathlib.Path(__file__).resolve().parent / 'test-fixtures'

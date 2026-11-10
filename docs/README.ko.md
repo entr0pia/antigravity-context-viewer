@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">简体中文</a> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a> | <b>한국어</b> | <a href="README.es.md">Español</a>
+  <a href="../README.md">简体中文</a> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a> | <b>한국어</b> | <a href="README.es.md">Español</a>
 </p>
 
 **Google Antigravity 데스크톱 클라이언트 (2.x)** 를 위해 설계된 순정 스타일의 **「단일 세션 컨텍스트 및 생성 모니터링 + 계정 전체 토큰 사용량 및 52주 잔디 히트맵 + 실시간 모델 출력 속도 벤치마크」** 올인원 시각화 도구입니다. `antigravity-chinese` 와 동일한 **ASAR 영구 인젝션 + CDP 무재부팅 핫 리로드** 구조를 채택하여 **외부 npm 의존성이 전혀 없습니다**. 스크립트 더블 클릭을 통한 간편 설치뿐만 아니라, AI 에이전트(Antigravity / Codex / Claude Code / Cursor)에 한 줄 요청만으로 자동 배포할 수 있습니다.

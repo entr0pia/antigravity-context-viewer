@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">简体中文</a> | <b>English</b> | <a href="README.ja.md">日本語</a> | <a href="README.ko.md">한국어</a> | <a href="README.es.md">Español</a>
+  <a href="../README.md">简体中文</a> | <b>English</b> | <a href="README.ja.md">日本語</a> | <a href="README.ko.md">한국어</a> | <a href="README.es.md">Español</a>
 </p>
 
 A native-feel, zero-dependency visualization suite for **Google Antigravity Desktop (2.x)** combining **session context window & generation monitoring**, an **account-wide Token activity & 52-week heatmap tracker**, and **real-time model output speed & latency benchmarks**. Built on an **in-place ASAR persistent patch + CDP live hot-reload** architecture, it supports one-click script installation as well as one-sentence automated deployment by any AI Agent (Antigravity / Codex / Claude Code / Cursor).

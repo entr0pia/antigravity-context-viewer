@@ -1,7 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs'), vm = require('node:vm'), core = require('./meter-core');
-const source = fs.readFileSync(require('node:path').join(__dirname, 'meter-renderer.js'), 'utf8');
+const fs = require('node:fs'), vm = require('node:vm'), core = require('../src/meter-core');
+try { require('../scripts/build').build(); } catch {}
+const source = fs.readFileSync(require('node:path').join(__dirname, '..', 'dist', 'meter-renderer.js'), 'utf8');
 function session(unknown = 0) { return { groups: Object.fromEntries(['user','assistant','thinking','tools','summaries','system','definitions'].map(k => [k,core.empty()])), total: { chars: 100, low: 10, high: 50 }, attachmentTotal: core.empty(), attachments: unknown ? [{ name: '<img onerror=bad>', status: 'unknown', unknownParts: ['图像 token 未知'], chars: 0, source: 'user' }] : [], unknownFiles: unknown, steps: 10, userMessages: 2, assistantMessages: 3 }; }
 function harness(scanSession = session()) {
   const elements = new Map();

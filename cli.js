@@ -14,10 +14,10 @@ const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
-const { loadAsarEngine, getStateDir } = require('./asar-engine');
-const { install, findAsarPath, tryHotInject, getOrStartLiveBridge } = require('./install');
-const { restore } = require('./restore');
-const { resolvePython } = require('./meter-collector');
+const { loadAsarEngine, getStateDir } = require('./installer/asar-engine');
+const { install, findAsarPath, tryHotInject, getOrStartLiveBridge } = require('./installer/install');
+const { restore } = require('./installer/restore');
+const { resolvePython } = require('./src/meter-collector');
 
 const asar = loadAsarEngine();
 const sha = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');

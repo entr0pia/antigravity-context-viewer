@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <b>简体中文</b> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a> | <a href="README.ko.md">한국어</a> | <a href="README.es.md">Español</a>
+  <b>简体中文</b> | <a href="docs/README.en.md">English</a> | <a href="docs/README.ja.md">日本語</a> | <a href="docs/README.ko.md">한국어</a> | <a href="docs/README.es.md">Español</a>
 </p>
 
 专为 **Google Antigravity 桌面客户端 (2.x)** 打造的原厂级 **「单次会话上下文与生成监控 + 账号全局 Token 计数热力图 + 模型实时输出速度监控」** 全功能可视化套件。采用与 `antigravity-chinese` 相同的 **ASAR 持久化注入 + CDP 免重启热挂载** 架构，**零第三方 npm 依赖**，既支持双击脚本一键安装，也支持直接丢给任何 AI 智能体（Antigravity / Codex / Claude Code / Cursor）一句话自动部署。
@@ -146,7 +146,7 @@
 > 只需要把本仓库交给你的 AI 智能体（Antigravity / Claude Code / Codex / Cursor）安装时，对它说一句：  
 > **“读取 AGENTS.md 帮我安装，并把界面文案翻译成 [你的目标语言，如 English / 日本語 / 한국어 / Español]”**  
 > 
-> AI 就会自动解析 `meter-renderer.js` 中的 UI 文本，将其无损替换为对应语言并执行安装热注入，免重启即刻呈现本地化界面。
+> AI 就会自动解析 `src/renderer/template.html` 中的 UI 文本，将其无损替换为对应语言并执行安装热注入，免重启即刻呈现本地化界面。
 
 ---
 
@@ -165,7 +165,7 @@ node cli.js status
 ```
 
 > [!IMPORTANT] **AI 智能体执行规范（见 [`AGENTS.md`](AGENTS.md)）**：
-> - **零外部依赖**：内置原生 Node.js ASAR 解包/封包引擎（[`asar-engine.js`](asar-engine.js)），无需执行 `npm install`。
+> - **零外部依赖**：内置原生 Node.js ASAR 解包/封包引擎（[`installer/asar-engine.js`](installer/asar-engine.js)），无需执行 `npm install`。
 > - **与汉化补丁 100% 兼容**：基于当前 `app.asar` 原位无损注入，完整保留已安装的 `antigravity-chinese` 汉化词库与补丁。
 > - **严禁强杀宿主进程**：在 Antigravity 会话内执行时，切勿关闭或杀死 `Antigravity.exe`；`node cli.js install` 会自动通过 `DevToolsActivePort` 将最新 UI 热挂载到当前窗口，1 秒内即时生效。
 
@@ -222,27 +222,49 @@ node --test meter-core.test.js meter-renderer.test.js
 
 ```text
 antigravity-context-viewer/
-├── assets/                                 # 演示动图、高清录屏与实拍截图
-│   ├── demo-01-context-audit.gif / .mp4    # 演示 1：会话上下文监控与底层技术参数附件审计
-│   ├── demo-02-token-heatmap.gif / .mp4    # 演示 2：Token 历史用量统计与 52 周活跃热力图交互
-│   ├── demo-03-panel-switching.gif / .mp4  # 演示 3：独立双面板平滑切换与侧边栏防遮挡自适应
-│   ├── demo-04-responsive-collapse.gif/.mp4# 演示 4：顶栏胶囊多级响应式折叠与窄屏自适应
-│   ├── panel-context-main.png              # 实拍 1：会话上下文与生成监控主视图
-│   ├── panel-context-audit-expanded.png    # 实拍 2：会话上下文全展开：外观调色与底层审计
-│   ├── capsule-speed-and-tooltip.png       # 实拍 3：顶栏环形胶囊、实时速度与原生气泡提示
-│   └── panel-token-heatmap-customizer.png  # 实拍 4：Token 用量总览与 5 档热力图逐格独立自定义
-├── asar-engine.js                          # 零外部依赖的纯原生 Node.js ASAR 打包/解包引擎
 ├── cli.js                                  # 统一命令行接口 (install / live / status / check / restore)
-├── install.js                              # ASAR 注入与运行时热挂载调度器
-├── restore.js                              # 原始备份校验与无损还原调度器
-├── meter-main.js                           # Electron 主进程窗口钩子与只读 IPC 通道
-├── meter-core.js                           # 上下文估算、Token 统计与分词引擎
-├── meter-renderer.js                       # 顶栏环形双胶囊、解耦双面板、5档热力图自定义渲染器
-├── meter-collector.js                      # 本地会话归档读取与附件提取收集器
-├── attachment_scan.py                      # 全格式附件只读分析核心脚本 (Office / PDF / Code)
-├── AGENTS.md                               # AI 智能体专用一键安装与校验指南
-├── install.bat / install.sh                # 一键安装入口脚本
-└── uninstall.bat / .sh                     # 一键卸载与还原入口脚本
+├── install.bat / install.sh                # 一键持久化安装脚本 (Windows / macOS / Linux)
+├── uninstall.bat / .sh                     # 一键无损卸载与官方原包还原脚本
+├── package.json                            # 项目元数据与脚本入口
+├── README.md                               # 项目主说明文档 (简体中文)
+├── AGENTS.md                               # AI 智能体专用一键安装与免重启执行规范
+├── LICENSE                                 # MIT 开源协议
+├── dist/                                   # 组装后的零依赖单文件注入产物 (dist/meter-renderer.js)
+├── src/                                    # 注入 Antigravity 宿主的核心组件与运行时源码
+│   ├── meter-core.js                       # 上下文估算、Token 统计与分词引擎
+│   ├── meter-collector.js                  # 本地会话归档读取与附件提取收集器
+│   ├── meter-main.js                       # Electron 主进程窗口钩子与只读 IPC 通道
+│   ├── attachment_scan.py                  # 全格式附件深度只读解析器 (Office / PDF / Code)
+│   └── renderer/                           # 拆解后的渲染器前端模块源码
+│       ├── styles.css                      # Shadow DOM 完整样式表
+│       ├── template.html                   # 骨架 DOM、双面板与拾色器 HTML 模板
+│       ├── init.js                         # 基础状态机与多单位数字格式化工具
+│       ├── colors.js                       # 主题跟随、色彩转换数学、热力图色阶与拾色器交互
+│       ├── layout.js                       # 宿主顶栏停靠、WCO 保留区、4 阶段响应式折叠与面板定位
+│       ├── panels.js                       # 双面板解耦切换、二级抽屉折叠与键盘导航
+│       ├── heatmap.js                      # 首次使用日时间轴、52 周活跃热力图与单元格气泡
+│       └── main.js                         # 模型生成速度平滑计算、渲染主循环与全局生命周期
+├── installer/                              # 安装工具链、宿主通信与 ASAR 持久化引擎
+│   ├── install.js                          # ASAR 注入与运行时热挂载调度器
+│   ├── restore.js                          # 原始备份校验与无损还原调度器
+│   ├── asar-engine.js                      # 零外部依赖的纯原生 Node.js ASAR 打包/解包引擎
+│   ├── live-host.js                        # CDP 临时回环只读通信桥梁
+│   ├── local-api.js                        # 本地语言服务端口与通信客户端
+│   └── runtime-check.js                    # 运行中窗口与 CDP 状态检测工具
+├── tests/                                  # 自动化单元测试套件
+│   ├── meter-core.test.js                  # 核心 Token 计算与分词单测
+│   ├── meter-renderer.test.js              # 前端交互、响应式布局与热力图单测
+│   └── attachment_scan_test.py             # 附件深度解析单测
+├── docs/                                   # 多语言文档与发版说明
+│   ├── README.en.md                        # English Documentation
+│   ├── README.ja.md                        # 日本語 ドキュメント
+│   ├── README.ko.md                        # 한국어 문서
+│   ├── README.es.md                        # Documentación en Español
+│   └── RELEASE_NOTES.md                    # 历史发版日志与技术演进记录
+├── scripts/                                # 构建与打包辅助工具
+│   ├── build.js                            # 零依赖前端组件编译组装脚本
+│   └── package-release.py                  # 跨平台 GitHub Release 资产打包脚本
+└── assets/                                 # 演示动图、高清录屏与实拍截图
 ```
 
 ---

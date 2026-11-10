@@ -7,7 +7,7 @@ When a user asks an AI Agent (Antigravity, Claude Code, Codex, Cursor, etc.) to 
 ---
 
 ## 1. Zero-Dependency Design
-- **No `npm install` is required.** This repository includes a built-in pure Node.js ASAR engine ([`asar-engine.js`](asar-engine.js)) and CDP WebSocket client.
+- **No `npm install` is required.** This repository includes a built-in pure Node.js ASAR engine ([`installer/asar-engine.js`](installer/asar-engine.js)) and CDP WebSocket client.
 - Only **Node.js (>= 18.x)** is required.
 - **Self-Protection Rule**: Do **NOT** kill or terminate `Antigravity.exe` when running inside an Antigravity agent session. `node cli.js install` automatically updates `app.asar` on disk AND hot-injects the UI into the currently running Antigravity window via Chrome DevTools Protocol (`DevToolsActivePort`) with zero downtime.
 
@@ -30,24 +30,25 @@ node cli.js install
 What `node cli.js install` does automatically:
 1. Auto-detects `app.asar` across Windows (`%LOCALAPPDATA%\Programs\antigravity\resources\app.asar`), macOS (`/Applications/Antigravity.app/Contents/Resources/app.asar`), and Linux. (Pass `--path "<custom-path>"` if installed in a non-standard directory).
 2. Creates a clean, SHA-256 verified backup in `backups/` (preserving any existing localization patches such as `antigravity-chinese`).
-3. Injects [`meter-main.js`](meter-main.js), [`meter-core.js`](meter-core.js), [`meter-renderer.js`](meter-renderer.js), [`meter-collector.js`](meter-collector.js), and [`attachment_scan.py`](attachment_scan.py) into `dist/`, and adds read-only hooks to `dist/utils.js` and `dist/preload.js`.
-4. Verifies SHA-256 integrity of all untouched files in `app.asar`.
-5. Connects to the running Antigravity window via `DevToolsActivePort` and hot-reloads the `#343434` native context meter badge immediately without restarting the app.
+3. Auto-assembles frontend components from `src/renderer/` into `dist/meter-renderer.js` via `scripts/build.js`.
+4. Injects [`src/meter-main.js`](src/meter-main.js), [`src/meter-core.js`](src/meter-core.js), [`dist/meter-renderer.js`](dist/meter-renderer.js), [`src/meter-collector.js`](src/meter-collector.js), and [`src/attachment_scan.py`](src/attachment_scan.py) into `dist/`, and adds read-only hooks to `dist/utils.js` and `dist/preload.js`.
+5. Verifies SHA-256 integrity of all untouched files in `app.asar`.
+6. Connects to the running Antigravity window via `DevToolsActivePort` and hot-reloads the `#343434` native context meter badge immediately without restarting the app.
 
 ### Step 3: Verify Installation
 Run:
 ```bash
 node cli.js status
-node --test meter-core.test.js meter-renderer.test.js
+node --test tests/meter-core.test.js tests/meter-renderer.test.js
 ```
 Confirm `"asarPatched": true` and `"active": true` in the JSON output.
 
 ---
 
 ## 3. On-Demand Multi-Language UI Translation
-The default UI language in `meter-renderer.js` is Simplified Chinese.
+The default UI language in `src/renderer/template.html` is Simplified Chinese.
 If the user specifies a target language (e.g., "Install and translate UI to English / Japanese / Korean / Spanish"):
-1. Open [`meter-renderer.js`](meter-renderer.js).
+1. Open [`src/renderer/template.html`](src/renderer/template.html).
 2. Translate the user-facing text literals into the requested target language (tab labels, badge hover tooltips, key metrics headers, status pills, and tooltip texts).
 3. Keep all DOM element IDs (`amount`, `badge`, `panel`, `badge-tokens`), CSS selectors, event handlers, and data structures untouched.
 4. Run `node cli.js install` to bundle and hot-inject the translated UI into Antigravity.

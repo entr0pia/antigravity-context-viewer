@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { summarize, analyzeSteps, measure } = require('./meter-core');
+const { summarize, analyzeSteps, measure } = require('../src/meter-core');
 const entry = (usage, context = {}) => ({ chatModel: { usage, chatStartMetadata: { contextWindowMetadata: context } } });
 const exceeded = 'INVALID_ARGUMENT (code 400): The input token count exceeds the maximum number of tokens allowed 1048576.';
 test('cache counted once, thinking not counted twice, backend budget preserved', () => {
@@ -61,7 +61,7 @@ test('model output speed and duration calculated accurately from timeToFirstToke
 });
 
 test('inline attachments and images are fully counted and parsed instead of unknown', async () => {
-  const { scanFiles } = require('./meter-collector');
+  const { scanFiles } = require('../src/meter-collector');
   const zlib = require('zlib');
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(100, 0); ihdr.writeUInt32BE(80, 4);

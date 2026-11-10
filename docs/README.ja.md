@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">简体中文</a> | <a href="README.en.md">English</a> | <b>日本語</b> | <a href="README.ko.md">한국어</a> | <a href="README.es.md">Español</a>
+  <a href="../README.md">简体中文</a> | <a href="README.en.md">English</a> | <b>日本語</b> | <a href="README.ko.md">한국어</a> | <a href="README.es.md">Español</a>
 </p>
 
 **Google Antigravity デスクトップアプリ (2.x)** 専用に設計された、純正デザイン準拠の **「単一セッション・コンテキスト＆生成監視 ＋ アカウント全体のトークン消費・52週ヒートマップ ＋ リアルタイム生成速度ベンチマーク」** 統合可視化スイート。`antigravity-chinese` と同様の **ASAR 直接注入 ＋ CDP による再起動不要の動的マウント** アーキテクチャを採用し、**外部 npm 依存ゼロ**。ワンクリックでの手動導入はもちろん、AI エージェント（Antigravity / Codex / Claude Code / Cursor）に指示するだけで自動セットアップが可能です。

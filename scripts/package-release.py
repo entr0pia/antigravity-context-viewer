@@ -9,6 +9,7 @@ import sys
 import json
 import zipfile
 import hashlib
+import subprocess
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -16,24 +17,41 @@ DIST_DIR = ROOT_DIR / "dist" / "release"
 
 COMMON_FILES = [
     "cli.js",
-    "install.js",
-    "restore.js",
-    "live-host.js",
-    "local-api.js",
-    "meter-main.js",
-    "meter-core.js",
-    "meter-renderer.js",
-    "meter-collector.js",
-    "attachment_scan.py",
-    "asar-engine.js",
     "package.json",
     "README.md",
-    "README.en.md",
-    "README.ja.md",
-    "README.ko.md",
-    "README.es.md",
     "AGENTS.md",
     "LICENSE",
+    # installer files
+    "installer/install.js",
+    "installer/restore.js",
+    "installer/live-host.js",
+    "installer/local-api.js",
+    "installer/asar-engine.js",
+    "installer/runtime-check.js",
+    # src files
+    "src/meter-main.js",
+    "src/meter-core.js",
+    "dist/meter-renderer.js",
+    "src/meter-collector.js",
+    "src/attachment_scan.py",
+    # src/renderer modular files
+    "src/renderer/styles.css",
+    "src/renderer/template.html",
+    "src/renderer/init.js",
+    "src/renderer/colors.js",
+    "src/renderer/layout.js",
+    "src/renderer/panels.js",
+    "src/renderer/heatmap.js",
+    "src/renderer/main.js",
+    # scripts
+    "scripts/build.js",
+    # docs
+    "docs/README.en.md",
+    "docs/README.ja.md",
+    "docs/README.ko.md",
+    "docs/README.es.md",
+    "docs/RELEASE_NOTES.md",
+    "docs/HANDOFF_NEXT_SESSION.md",
 ]
 
 PLATFORMS = [
@@ -61,6 +79,7 @@ def get_version() -> str:
 def build_releases():
     version = get_version()
     DIST_DIR.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["node", str(ROOT_DIR / "scripts" / "build.js")], check=True)
     
     # Clean previous zip files in dist/release
     for old in DIST_DIR.glob("*.zip"):

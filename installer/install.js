@@ -56,7 +56,7 @@ function findAsarPath(customPath) {
 async function getOrStartLiveBridge(origin) {
   const stateDir = getStateDir();
   const liveSessionPath = path.join(stateDir, '.live-session.json');
-  const fallbackPath = path.join(__dirname, '.live-session.json');
+  const fallbackPath = path.join(__dirname, '..', '.live-session.json');
   const readSession = () => {
     for (const p of [liveSessionPath, fallbackPath]) {
       if (fs.existsSync(p)) {
@@ -115,9 +115,13 @@ async function tryHotInject() {
     const targets = pages.filter(p => p.type === 'page' && /^https:\/\/127\.0\.0\.1:\d+\//.test(p.url));
     if (!targets.length) return false;
 
-    const bundle = ['meter-core.js', 'meter-renderer.js']
-      .map(f => fs.readFileSync(path.join(__dirname, f), 'utf8'))
-      .join('\n');
+    try { require('../scripts/build').build(); } catch {}
+    const srcDir = path.join(__dirname, '..', 'src');
+    const distDir = path.join(__dirname, '..', 'dist');
+    const bundle = [
+      fs.readFileSync(path.join(srcDir, 'meter-core.js'), 'utf8'),
+      fs.readFileSync(path.join(distDir, 'meter-renderer.js'), 'utf8')
+    ].join('\n');
 
     for (const target of targets) {
       const targetOrigin = new URL(target.url).origin;
@@ -146,7 +150,7 @@ async function tryHotInject() {
         await evalExpr('window.__AGContextMeterLive=' + JSON.stringify({ port: liveInfo.port, token: liveInfo.token }));
       }
       try {
-        const { collectTokenHistory } = require('./meter-collector');
+        const { collectTokenHistory } = require('../src/meter-collector');
         const historyData = collectTokenHistory({ force: true });
         await evalExpr('window.__AGContextMeterHistory=' + JSON.stringify(historyData));
       } catch {}
@@ -167,7 +171,7 @@ async function install(options = {}) {
   let sourceArchive = installed;
   let previousManifest = null;
   const manifestPath = path.join(stateDir, 'installation.json');
-  const legacyManifestPath = path.join(__dirname, 'installation.json');
+  const legacyManifestPath = path.join(__dirname, '..', 'installation.json');
 
   const activeManifestPath = fs.existsSync(manifestPath)
     ? manifestPath
@@ -237,10 +241,14 @@ async function install(options = {}) {
     preloadContent += `\n${preloadMarker}\nelectron_1.contextBridge.exposeInMainWorld("contextMeterAPI", { scan: (id, force) => electron_1.ipcRenderer.invoke("context-meter:scan", id, force === true), getTokenHistory: (force) => electron_1.ipcRenderer.invoke("context-meter:token-history", force === true), syncOverlay: (opts) => electron_1.ipcRenderer.invoke("context-meter:sync-overlay", opts) });\n`;
     fs.writeFileSync(preloadPath, preloadContent);
 
-    const additions = ['meter-main.js', 'meter-core.js', 'meter-renderer.js', 'meter-collector.js', 'attachment_scan.py'];
+    try { require('../scripts/build').build(); } catch {}
+    const srcDir = path.join(__dirname, '..', 'src');
+    const distDir = path.join(__dirname, '..', 'dist');
+    const additions = ['meter-main.js', 'meter-core.js', 'meter-collector.js', 'attachment_scan.py'];
     for (const file of additions) {
-      fs.copyFileSync(path.join(__dirname, file), path.join(staging, 'dist', file));
+      fs.copyFileSync(path.join(srcDir, file), path.join(staging, 'dist', file));
     }
+    fs.copyFileSync(path.join(distDir, 'meter-renderer.js'), path.join(staging, 'dist', 'meter-renderer.js'));
 
     const originalEntries = asar.listPackage(sourceArchive);
     for (const file of originalEntries) {

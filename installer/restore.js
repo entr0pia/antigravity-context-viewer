@@ -46,7 +46,7 @@ async function tryHotDispose() {
 
 async function restore() {
   const stateManifest = path.join(getStateDir(), 'installation.json');
-  const localManifest = path.join(__dirname, 'installation.json');
+  const localManifest = path.join(__dirname, '..', 'installation.json');
   const manifestPath = fs.existsSync(stateManifest) ? stateManifest : localManifest;
   if (!fs.existsSync(manifestPath)) {
     throw new Error('installation.json not found; nothing to restore.');

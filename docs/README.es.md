@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">简体中文</a> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a> | <a href="README.ko.md">한국어</a> | <b>Español</b>
+  <a href="../README.md">简体中文</a> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a> | <a href="README.ko.md">한국어</a> | <b>Español</b>
 </p>
 
 Una suite de visualización con acabado nativo para **Google Antigravity Desktop (2.x)** que combina el **monitoreo de contexto de sesión y generación**, un **panel de actividad y mapa de calor de 52 semanas de Tokens**, y **métricas de velocidad de salida y latencia en tiempo real**. Basado en una arquitectura de **parche persistente ASAR + recarga en caliente vía CDP sin reiniciar**, **sin dependencias externas de npm**. Soporta instalación manual en un clic y despliegue automático mediante agentes de IA (Antigravity / Codex / Claude Code / Cursor).

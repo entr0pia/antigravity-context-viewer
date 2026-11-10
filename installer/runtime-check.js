@@ -20,12 +20,18 @@ async function main() {
       const stateDir = getStateDir();
       const livePath = fs.existsSync(path.join(stateDir, '.live-session.json'))
         ? path.join(stateDir, '.live-session.json')
-        : path.join(__dirname, '.live-session.json');
+        : path.join(__dirname, '..', '.live-session.json');
       if (fs.existsSync(livePath)) {
         const live = JSON.parse(fs.readFileSync(livePath, 'utf8'));
         if (live.origin === new URL(pages[0].url).origin) await evaluate('window.__AGContextMeterLive=' + JSON.stringify({ port: live.port, token: live.token }));
       }
-      const source = ['meter-core.js', 'meter-renderer.js'].map(file => fs.readFileSync(path.join(__dirname, file), 'utf8')).join('\n');
+      try { require('../scripts/build').build(); } catch {}
+      const srcDir = path.join(__dirname, '..', 'src');
+      const distDir = path.join(__dirname, '..', 'dist');
+      const source = [
+        fs.readFileSync(path.join(srcDir, 'meter-core.js'), 'utf8'),
+        fs.readFileSync(path.join(distDir, 'meter-renderer.js'), 'utf8')
+      ].join('\n');
       await evaluate(source);
     }
     console.log(JSON.stringify(await evaluate(`(()=>{const s=window.__AGContextMeter?.snapshot();return {version:window.__AGContextMeter?.version,route:s?.route,latest:s?.latest,scanError:s?.scanError,scanBusy:s?.scanBusy,session:s?.scan?.session?{steps:s.scan.session.steps,characters:s.scan.session.total.chars,range:[s.scan.session.total.low,s.scan.session.total.high],attachments:s.scan.session.attachments.length,unknownFiles:s.scan.session.unknownFiles}:null,badge:document.getElementById('ag-context-meter')?.shadowRoot?.getElementById('amount').textContent,widgets:document.querySelectorAll('#ag-context-meter').length}})()`), null, 2));
