@@ -601,7 +601,7 @@ test('speed smoothing strictly applies formula (curr * 0.6 + prev * 0.4) and dis
   assert.equal(h.elements.get('speed-val').textContent, '189 tok/s');
   assert.equal(h.elements.get('speed-amount').textContent, '189 tok/s');
   assert.equal(h.elements.get('speed-val').title, '本轮：181 tok/s\n上轮：201 tok/s');
-  assert.equal(h.elements.get('speed-badge').title, '本轮：181 tok/s\n上轮：201 tok/s');
+  assert.equal(h.elements.get('speed-badge').title, '');
   assert.match(h.elements.get('badge-speed').title, /最新纯流式输出速度：189 tok\/s/);
 
   h.sandbox.__AGContextMeter.dispose();

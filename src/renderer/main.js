@@ -219,7 +219,7 @@
           spVal.textContent = `${formatTps(effectiveTps)} tok/s`;
           spVal.title = panelSpeedTip;
         }
-        if (spBadge) spBadge.title = panelSpeedTip;
+        if (spBadge) spBadge.title = '';
         if (spDur) spDur.textContent = sp.duration ? `${sp.duration}s` : '—';
         if (spTtft) spTtft.textContent = sp.ttft ? `${sp.ttft}s` : '—';
         if (spTokens) {
