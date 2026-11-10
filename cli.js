@@ -15,7 +15,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const { loadAsarEngine, getStateDir } = require('./asar-engine');
-const { install, findAsarPath, tryHotInject } = require('./install');
+const { install, findAsarPath, tryHotInject, getOrStartLiveBridge } = require('./install');
 const { restore } = require('./restore');
 const { resolvePython } = require('./meter-collector');
 
@@ -92,27 +92,7 @@ async function queryLiveWindow() {
 async function ensureLiveBridgeIfNeeded() {
   const live = await queryLiveWindow();
   if (!live.running || !live.pageFound || live.hasIpcBridge) return;
-  const stateDir = getStateDir();
-  const liveSessionPath = fs.existsSync(path.join(stateDir, '.live-session.json'))
-    ? path.join(stateDir, '.live-session.json')
-    : path.join(__dirname, '.live-session.json');
-  let alive = false;
-  if (fs.existsSync(liveSessionPath)) {
-    try {
-      const info = JSON.parse(fs.readFileSync(liveSessionPath, 'utf8'));
-      process.kill(info.pid, 0);
-      alive = true;
-    } catch {}
-  }
-  if (!alive) {
-    const child = spawn(process.execPath, [path.join(__dirname, 'live-host.js')], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true
-    });
-    child.unref();
-    await new Promise(r => setTimeout(r, 800));
-  }
+  await getOrStartLiveBridge();
 }
 
 async function cmdStatus(customPath) {

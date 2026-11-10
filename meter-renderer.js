@@ -2954,8 +2954,7 @@
       }
       if (k.startsWith(yearPrefix)) yearTokens += t;
     }
-    const latestActiveKey = keys[keys.length - 1] || todayStr;
-    const shownToday = todayTokens > 0 ? todayTokens : (Number(map[latestActiveKey]?.total) || 0);
+    const shownToday = todayTokens;
     const convCount = Number(payload.summary?.totalConversations) || Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalConversations) || keys.length;
     const avgMonth = monthDays > 0 ? Math.round(monthTokens / monthDays) : 0;
 
@@ -3009,26 +3008,32 @@
   }
 
   let historySyncBusy = false;
-  async function syncTokenHistoryFromHost() {
+  async function syncTokenHistoryFromHost(force = false) {
     if (historySyncBusy || state.disposed) return;
     historySyncBusy = true;
     try {
-      if (typeof window !== 'undefined' && window.__AGContextMeterHistory) {
+      if (typeof window !== 'undefined' && window.__AGContextMeterHistory && (!ANTIGRAVITY_TOKEN_DATA.dailyMap || Object.keys(ANTIGRAVITY_TOKEN_DATA.dailyMap).length === 0)) {
         applyTokenHistoryPayload(window.__AGContextMeterHistory);
       }
       if (typeof window !== 'undefined' && typeof window.contextMeterAPI?.getTokenHistory === 'function') {
-        const res = await window.contextMeterAPI.getTokenHistory(false);
-        if (res?.ok && res.data) applyTokenHistoryPayload(res.data);
+        const res = await window.contextMeterAPI.getTokenHistory(force === true);
+        if (res?.ok && res.data) {
+          applyTokenHistoryPayload(res.data);
+          if (typeof window !== 'undefined') window.__AGContextMeterHistory = res.data;
+        }
       } else if (typeof window !== 'undefined' && window.__AGContextMeterLive?.port) {
         const live = window.__AGContextMeterLive;
         const r = await fetch(`http://127.0.0.1:${live.port}/token-history`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-AG-Context-Token': live.token },
-          body: JSON.stringify({ force: false })
+          body: JSON.stringify({ force: force === true })
         });
         if (r.ok) {
           const j = await r.json();
-          if (j?.ok && j.data) applyTokenHistoryPayload(j.data);
+          if (j?.ok && j.data) {
+            applyTokenHistoryPayload(j.data);
+            if (typeof window !== 'undefined') window.__AGContextMeterHistory = j.data;
+          }
         }
       }
     } catch {}

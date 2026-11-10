@@ -605,3 +605,59 @@ test('speed smoothing strictly applies formula (curr * 0.6 + prev * 0.4) and dis
 
   h.sandbox.__AGContextMeter.dispose();
 });
+
+test('today tokens shows 0 when today has no tokens and does not fall back to previous day; updates accurately with live payload', async () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const todayKey = `${y}-${m}-${day}`;
+
+  const h = harness();
+  h.finishScan();
+
+  // 1. Initial history with no usage today (yesterday had 500K)
+  h.sandbox.window.contextMeterAPI.getTokenHistory = async () => ({
+    ok: true,
+    data: {
+      summary: { grandTotalTokens: 500000, totalTokens: 500000, todayTokens: 0, firstUseDate: '2026-10-01' },
+      firstUseDate: '2026-10-01',
+      dailyMap: {
+        '2026-10-01': { total: 500000, input: 400000, output: 100000, cache: 0, steps: 10 }
+      }
+    }
+  });
+
+  const bTokens = h.elements.get('badge-tokens');
+  bTokens.click();
+  await h.flush();
+
+  const badgeAmt = h.elements.get('token-amount');
+  const todayVal = h.elements.get('t-today-val');
+
+  // Must be 0, NOT 500K
+  assert.equal(todayVal.textContent, '0');
+  assert.equal(badgeAmt.textContent, '0');
+
+  // 2. Now simulate live host sync providing today usage (15.2M)
+  h.sandbox.window.contextMeterAPI.getTokenHistory = async () => ({
+    ok: true,
+    data: {
+      summary: { grandTotalTokens: 15700000, totalTokens: 15700000, todayTokens: 15200000, firstUseDate: '2026-10-01' },
+      firstUseDate: '2026-10-01',
+      dailyMap: {
+        '2026-10-01': { total: 500000, input: 400000, output: 100000, cache: 0, steps: 10 },
+        [todayKey]: { total: 15200000, input: 2000000, output: 200000, cache: 13000000, steps: 50 }
+      }
+    }
+  });
+
+  h.elements.get('panel-tokens').hidden = true;
+  bTokens.click();
+  await new Promise(r => setTimeout(r, 20));
+
+  assert.equal(todayVal.textContent, '15.2M');
+  assert.equal(badgeAmt.textContent, '15.2M');
+
+  h.sandbox.__AGContextMeter.dispose();
+});

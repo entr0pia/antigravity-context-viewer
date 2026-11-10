@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
 const { loadAsarEngine, getStateDir } = require('./asar-engine');
 
 const asar = loadAsarEngine();
@@ -52,6 +53,47 @@ function findAsarPath(customPath) {
   throw new Error('Could not auto-detect Antigravity installation (app.asar). Use --path <path-to-app.asar>.');
 }
 
+async function getOrStartLiveBridge(origin) {
+  const stateDir = getStateDir();
+  const liveSessionPath = path.join(stateDir, '.live-session.json');
+  const fallbackPath = path.join(__dirname, '.live-session.json');
+  const readSession = () => {
+    for (const p of [liveSessionPath, fallbackPath]) {
+      if (fs.existsSync(p)) {
+        try {
+          const info = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (info?.pid && info?.port) {
+            process.kill(info.pid, 0);
+            return info;
+          }
+        } catch {}
+      }
+    }
+    return null;
+  };
+
+  let session = readSession();
+  if (session && (!origin || session.origin === origin)) {
+    return session;
+  }
+
+  try {
+    const child = spawn(process.execPath, [path.join(__dirname, 'live-host.js')], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    });
+    child.unref();
+
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 100));
+      session = readSession();
+      if (session && (!origin || session.origin === origin)) return session;
+    }
+  } catch {}
+  return session;
+}
+
 async function tryHotInject() {
   try {
     const appData = process.env.APPDATA || (process.platform === 'darwin'
@@ -73,16 +115,13 @@ async function tryHotInject() {
     const targets = pages.filter(p => p.type === 'page' && /^https:\/\/127\.0\.0\.1:\d+\//.test(p.url));
     if (!targets.length) return false;
 
-    const stateDir = getStateDir();
-    const livePath = fs.existsSync(path.join(stateDir, '.live-session.json'))
-      ? path.join(stateDir, '.live-session.json')
-      : path.join(__dirname, '.live-session.json');
-    const liveInfo = fs.existsSync(livePath) ? JSON.parse(fs.readFileSync(livePath, 'utf8')) : null;
     const bundle = ['meter-core.js', 'meter-renderer.js']
       .map(f => fs.readFileSync(path.join(__dirname, f), 'utf8'))
       .join('\n');
 
     for (const target of targets) {
+      const targetOrigin = new URL(target.url).origin;
+      const liveInfo = await getOrStartLiveBridge(targetOrigin);
       const ws = new WebSocket(target.webSocketDebuggerUrl);
       await new Promise((resolve, reject) => {
         ws.addEventListener('open', resolve, { once: true });
@@ -103,7 +142,7 @@ async function tryHotInject() {
         ws.addEventListener('message', handler);
         ws.send(JSON.stringify({ id, method: 'Runtime.evaluate', params: { expression, returnByValue: true, awaitPromise: true } }));
       });
-      if (liveInfo && liveInfo.origin === new URL(target.url).origin) {
+      if (liveInfo && liveInfo.origin === targetOrigin) {
         await evalExpr('window.__AGContextMeterLive=' + JSON.stringify({ port: liveInfo.port, token: liveInfo.token }));
       }
       try {
@@ -288,4 +327,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { install, findAsarPath, tryHotInject };
+module.exports = { install, findAsarPath, tryHotInject, getOrStartLiveBridge };

@@ -311,6 +311,7 @@ function collectTokenHistory(options = {}) {
     try {
       const content = fs.readFileSync(file, 'utf8');
       const lines = content.split(/\r?\n/);
+      let fileDateKey = null;
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if (!line) continue;
@@ -320,6 +321,7 @@ function collectTokenHistory(options = {}) {
           const d = new Date(mDate[1]);
           if (!Number.isNaN(d.getTime())) {
             dateKey = formatLocalDateKey(d);
+            fileDateKey = dateKey;
             registerDate(dateKey);
           }
         }
@@ -328,15 +330,16 @@ function collectTokenHistory(options = {}) {
           const outp = Number((line.match(/"output_tokens":(\d+)/) || [])[1] || 0);
           const cap = Number((line.match(/"cache_read_tokens":(\d+)/) || [])[1] || 0);
           const tot = inp + outp + cap;
-          if (tot > 0 && dateKey) {
-            if (!scannedDaily[dateKey]) {
-              scannedDaily[dateKey] = { total: 0, input: 0, output: 0, cache: 0, steps: 0 };
+          const targetKey = dateKey || fileDateKey;
+          if (tot > 0 && targetKey) {
+            if (!scannedDaily[targetKey]) {
+              scannedDaily[targetKey] = { total: 0, input: 0, output: 0, cache: 0, steps: 0 };
             }
-            scannedDaily[dateKey].total += tot;
-            scannedDaily[dateKey].input += inp;
-            scannedDaily[dateKey].output += outp;
-            scannedDaily[dateKey].cache += cap;
-            scannedDaily[dateKey].steps += 1;
+            scannedDaily[targetKey].total += tot;
+            scannedDaily[targetKey].input += inp;
+            scannedDaily[targetKey].output += outp;
+            scannedDaily[targetKey].cache += cap;
+            scannedDaily[targetKey].steps += 1;
           }
         }
       }
