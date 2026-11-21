@@ -201,9 +201,18 @@ async function install(options = {}) {
       .replace('\n    try { require("./meter-main").ensureProxyEnvironment(env); } catch {}', '')
       .replace(hookLine, '');
   }
-  const marker = '    void win.loadURL(url);';
+  const legacyMarker = '    void win.loadURL(url);';
   const setupNodeMarker = 'function setupNodeWrapper(env) {';
-  if (originalUtils.split(marker).length !== 2 || !originalUtils.includes(setupNodeMarker)) {
+  let marker = null;
+  if (originalUtils.includes(legacyMarker) && originalUtils.split(legacyMarker).length === 2) {
+    marker = legacyMarker;
+  } else {
+    const match = originalUtils.match(/[ ]+void loadHubWindowUrl\(.*?\);/);
+    if (match && originalUtils.split(match[0]).length === 2) {
+      marker = match[0];
+    }
+  }
+  if (!marker || !originalUtils.includes(setupNodeMarker)) {
     throw new Error('Unexpected createWindow/setupNodeWrapper source in dist/utils.js; nothing changed.');
   }
 
