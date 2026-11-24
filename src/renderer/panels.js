@@ -37,7 +37,9 @@
       syncHostStackingElevation(true);
       positionFloatingPanels();
       void syncTokenHistoryFromHost();
-      renderActiveHeatView(true);
+      if (heatViewDirty || !el('h-grid-cols')?.children?.length) {
+        renderActiveHeatView(false);
+      }
     } else if (target === 'context') {
       hideContextTooltip();
       closeColorPicker();
@@ -164,8 +166,10 @@
   function renderActiveHeatView(forceRebuild = false) {
     if (activeHeatView === 'weekly') {
       renderHeatmapWeekly();
+      heatViewDirty = false;
     } else if (activeHeatView === 'cum') {
       renderHeatmapCum();
+      heatViewDirty = false;
     } else {
       renderHeatmapGrid(forceRebuild);
     }

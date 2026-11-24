@@ -38,6 +38,12 @@
 
   (document.body || document.documentElement).appendChild(host);
   const el = id => shadow.getElementById(id);
+  const setText = (node, val) => {
+    const str = String(val);
+    if (node && node.textContent !== str) node.textContent = str;
+  };
+  let heatViewDirty = true;
+  const markHeatViewDirty = () => { heatViewDirty = true; };
   const fmt = v => v == null ? '—' : Math.round(v).toLocaleString('en-US');
   const short = v => {
     if (v == null) return '—';
@@ -63,7 +69,8 @@
     route: null, count: 0, latest: null, requestAt: 0, requestError: '',
     requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0,
     scanError: '', scan: null, generation: 0, controllers: new Set(),
-    disposed: false, layoutMode: 'wide', tooltipOpen: false, prevSpeed: null, currSpeed: null, speedHistory: []
+    disposed: false, layoutMode: 'wide', tooltipOpen: false, prevSpeed: null, currSpeed: null, speedHistory: [],
+    lastScannedCount: -1, lastScannedActual: null, lastScanAt: 0, idlePolls: 0, lastPollSig: ''
   };
   const route = () => location.pathname.match(/^\/c\/([a-f\d-]{36})(?:\/|$)/i)?.[1] || null;
   let activeHeatView = 'daily';

@@ -662,3 +662,53 @@ test('today tokens shows 0 when today has no tokens and does not fall back to pr
 
   h.sandbox.__AGContextMeter.dispose();
 });
+
+test('performance: hidden token panel defers 364-cell heatmap DOM build until opened and skips redundant rebuilds on identical payload', () => {
+  const h = harness();
+  const api = h.sandbox.__AGContextMeter;
+  const payload = {
+    firstUseDate: '2026-10-20',
+    dailyMap: {
+      '2026-10-20': { total: 3594989, input: 738031, output: 52244, cache: 2804714, steps: 63 }
+    }
+  };
+
+  // Panel is initially hidden -> payload updates summary badge but does NOT touch or build 52*7 heatmap cells
+  assert.equal(h.elements.get('panel-tokens').hidden, true);
+  api.setTokenHistoryForTest(payload);
+  assert.equal(h.elements.get('h-grid-cols'), undefined);
+
+  // Opening the panel lazily builds the 52-column heatmap once
+  h.elements.get('badge-tokens').click();
+  const colsBox = h.elements.get('h-grid-cols');
+  assert.ok(colsBox);
+  assert.equal(colsBox.children.length, 52);
+  const firstColRef = colsBox.children[0];
+
+  // Applying identical payload while open preserves existing DOM nodes instead of tearing down and rebuilding
+  api.setTokenHistoryForTest(payload);
+  assert.equal(colsBox.children[0], firstColRef);
+
+  api.dispose();
+});
+
+test('performance: syncOverlay IPC deduplicates unchanged theme colors across repeated renders', async () => {
+  const h = harness();
+  let syncCalls = 0;
+  h.sandbox.window.contextMeterAPI.syncOverlay = async () => { syncCalls++; return { ok: true }; };
+  const api = h.sandbox.__AGContextMeter;
+
+  api.setTheme('light');
+  const afterLight = syncCalls;
+  assert.ok(afterLight >= 1);
+
+  // Repeated render with same theme must not spam syncOverlay IPC
+  api.setTheme('light');
+  assert.equal(syncCalls, afterLight);
+
+  // Switching to dark emits one new syncOverlay call
+  api.setTheme('dark');
+  assert.equal(syncCalls, afterLight + 1);
+
+  api.dispose();
+});

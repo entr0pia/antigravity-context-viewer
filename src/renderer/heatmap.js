@@ -208,9 +208,9 @@
     const badgeAmt = el('token-amount');
     const badgeExtra = el('token-hover-extra');
     const overAmt = el('overflow-tokens-val');
-    if (badgeAmt) badgeAmt.textContent = fmtCardM(shownToday);
-    if (badgeExtra) badgeExtra.textContent = `· 全量 ${fmtCardM(totalTokens)}`;
-    if (overAmt) overAmt.textContent = fmtCardM(shownToday);
+    setText(badgeAmt, fmtCardM(shownToday));
+    setText(badgeExtra, `· 全量 ${fmtCardM(totalTokens)}`);
+    setText(overAmt, fmtCardM(shownToday));
     const bTokens = el('badge-tokens');
     if (bTokens) bTokens.title = `今日 Token 用量：${fmtCardM(shownToday)}（全量 ${fmtCardM(totalTokens)}，点击展开详情）`;
 
@@ -223,17 +223,21 @@
     const tYearVal = el('t-year-val');
     const tYearSub = el('t-year-sub');
 
-    if (tTotalVal) tTotalVal.textContent = fmtCardM(totalTokens);
-    if (tTotalSub) tTotalSub.textContent = `${totalTokens.toLocaleString('en-US')} Tokens`;
-    if (tTodayVal) tTodayVal.textContent = fmtCardM(shownToday);
-    if (tTodaySub) tTodaySub.textContent = `${convCount} 会话实时累加`;
-    if (tMonthVal) tMonthVal.textContent = fmtCardM(monthTokens);
-    if (tMonthSub) tMonthSub.textContent = `日均约 ${fmtCardM(avgMonth)}`;
-    if (tYearVal) tYearVal.textContent = fmtCardM(yearTokens);
-    if (tYearSub) tYearSub.textContent = `${keys.length} 天活动记录`;
+    setText(tTotalVal, fmtCardM(totalTokens));
+    setText(tTotalSub, `${totalTokens.toLocaleString('en-US')} Tokens`);
+    setText(tTodayVal, fmtCardM(shownToday));
+    setText(tTodaySub, `${convCount} 会话实时累加`);
+    setText(tMonthVal, fmtCardM(monthTokens));
+    setText(tMonthSub, `日均约 ${fmtCardM(avgMonth)}`);
+    setText(tYearVal, fmtCardM(yearTokens));
+    setText(tYearSub, `${keys.length} 天活动记录`);
 
     computeTimelineWindow();
-    renderActiveHeatView(true);
+    heatViewDirty = true;
+    // 面板关闭时不重建 364 格热力图 DOM，等展开时按需懒渲染
+    if (!el('panel-tokens')?.hidden) {
+      renderActiveHeatView(false);
+    }
     return true;
   }
 
@@ -277,12 +281,17 @@
     const monthsBox = el('h-months');
     if (!colsBox || !monthsBox) return;
     const win = computeTimelineWindow();
-    const sig = `${win.firstStr}:${formatLocalYmd(win.winStart)}:${Object.keys(ANTIGRAVITY_TOKEN_DATA.dailyMap).length}`;
-    if (!forceRebuild && colsBox.children.length > 0 && colsBox.getAttribute('data-sig') === sig) return;
+    const sum = ANTIGRAVITY_TOKEN_DATA.summary || {};
+    const sig = `${win.firstStr}:${formatLocalYmd(win.winStart)}:${Object.keys(ANTIGRAVITY_TOKEN_DATA.dailyMap).length}:${sum.grandTotalTokens || 0}:${sum.todayTokens || 0}`;
+    if (!forceRebuild && colsBox.children.length > 0 && colsBox.getAttribute('data-sig') === sig) {
+      heatViewDirty = false;
+      return;
+    }
 
     colsBox.replaceChildren();
     monthsBox.replaceChildren();
     colsBox.setAttribute('data-sig', sig);
+    heatViewDirty = false;
 
     const todayKey = formatLocalYmd(win.today);
     const list = [];

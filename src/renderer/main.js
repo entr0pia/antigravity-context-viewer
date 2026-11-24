@@ -57,7 +57,9 @@
       hideContextTooltip();
       return;
     }
-    ensureHostDocked();
+    if (!isHostProperlyDocked()) {
+      ensureHostDocked();
+    }
 
     const d = state.latest, session = state.scan?.session;
     const stale = state.requestError || state.requestAt && Date.now() - state.requestAt > 20000;
@@ -303,8 +305,33 @@
         state.prevSpeed = state.speedHistory.length > 1 ? state.speedHistory[state.speedHistory.length - 2] : null;
       }
       state.requestAt = Date.now(); state.requestError = '';
+      const pollSig = `${state.count}|${state.latest?.actual ?? ''}|${state.latest?.exceeded ? 1 : 0}|${state.latest?.speed?.outputTokens ?? ''}|${state.latest?.speed?.duration ?? ''}`;
+      if (pollSig !== state.lastPollSig) {
+        const hadPrevSig = state.lastPollSig !== '';
+        state.lastPollSig = pollSig;
+        state.idlePolls = 0;
+        // 检测到新一轮对话输出变化时，允许按需触发全量扫描（最小间隔 15s）与历史同步
+        if (hadPrevSig && !state.scanBusy && Date.now() - state.lastScanAt >= 15000) {
+          state.scanNext = Math.min(state.scanNext, Date.now());
+        }
+        if (hadPrevSig && Date.now() - lastHistorySync >= 15000) {
+          lastHistorySync = Date.now();
+          void syncTokenHistoryFromHost(false);
+        }
+      } else {
+        state.idlePolls++;
+      }
     } catch (e) { if (generation === state.generation && !state.disposed) state.requestError = e.name === 'AbortError' ? '读取超时' : e.message; }
-    finally { clearTimeout(timeout); state.controllers.delete(controller); if (generation === state.generation && !state.disposed) { state.requestBusy = false; state.requestNext = Date.now() + (document.hidden ? 15000 : 3000); render(); } }
+    finally {
+      clearTimeout(timeout);
+      state.controllers.delete(controller);
+      if (generation === state.generation && !state.disposed) {
+        state.requestBusy = false;
+        const nextDelay = document.hidden ? 20000 : (state.idlePolls >= 3 ? 6000 : 3000);
+        state.requestNext = Date.now() + nextDelay;
+        render();
+      }
+    }
   }
 
   async function scan(generation, id, force = false) {
@@ -321,11 +348,14 @@
       if (generation !== state.generation || state.disposed) return;
       if (!result?.ok) throw new Error(result?.error || '扫描未返回有效结果');
       state.scan = result.data; state.scanError = '';
+      state.lastScannedCount = state.count;
+      state.lastScannedActual = state.latest?.actual ?? null;
+      state.lastScanAt = Date.now();
       if (result.data.scannedAt >= state.requestAt && result.data.latest) { state.latest = result.data.latest; state.requestAt = result.data.scannedAt; }
       state.latest = withStepError(state.latest);
       renderFiles(result.data.session);
     } catch (e) { if (generation === state.generation && !state.disposed) state.scanError = e.message; }
-    finally { if (generation === state.generation && !state.disposed) { state.scanBusy = false; state.scanNext = Date.now() + (document.hidden ? 60000 : 20000); render(); } }
+    finally { if (generation === state.generation && !state.disposed) { state.scanBusy = false; state.scanNext = Date.now() + (document.hidden ? 300000 : 120000); render(); } }
   }
 
   let lastHistorySync = 0;
@@ -333,18 +363,20 @@
     const id = route();
     if (id !== state.route) {
       for (const controller of state.controllers) controller.abort(); state.controllers.clear(); state.generation++;
-      Object.assign(state, { route: id, count: 0, latest: null, requestAt: 0, requestError: '', requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanError: '', scan: null, prevSpeed: null, currSpeed: null, speedHistory: [] }); toggle(false); hideContextTooltip(); renderFiles(null); render();
-      void syncTokenHistoryFromHost(true);
+      Object.assign(state, { route: id, count: 0, latest: null, requestAt: 0, requestError: '', requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanError: '', scan: null, prevSpeed: null, currSpeed: null, speedHistory: [], lastScannedCount: -1, lastScannedActual: null, lastScanAt: 0, idlePolls: 0, lastPollSig: '' }); toggle(false); hideContextTooltip(); renderFiles(null); render();
+      lastHistorySync = Date.now();
+      void syncTokenHistoryFromHost(false);
     }
     if (id && !state.requestBusy && Date.now() >= state.requestNext) void requestPoll(state.generation, id);
     if (id && !state.scanBusy && Date.now() >= state.scanNext) void scan(state.generation, id);
-    if (Date.now() - lastHistorySync > 15000) {
+    const histInterval = document.hidden ? 180000 : 60000;
+    if (Date.now() - lastHistorySync > histInterval) {
       lastHistorySync = Date.now();
       void syncTokenHistoryFromHost(false);
     }
   }
 
-  const timer = setInterval(tick, 500);
+  const timer = setInterval(tick, 1000);
   globalThis.__AGContextMeter = {
     version: '2.6.0',
     theme: () => resolveTheme(),

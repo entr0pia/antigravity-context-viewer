@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ipcMain } = require('electron');
-const { collect, collectTokenHistory } = require('./meter-collector');
+const { collect, collectTokenHistoryAsync } = require('./meter-collector');
 
 function ensureProxyEnvironment(targetEnv = process.env) {
   try {
@@ -67,7 +67,7 @@ exports.installContextMeter = function (win) {
     ipcMain.handle('context-meter:token-history', async (event, force) => {
       const url = new URL(event.senderFrame?.url || event.sender.getURL());
       if (url.protocol !== 'https:' || url.hostname !== '127.0.0.1' || event.senderFrame !== event.sender.mainFrame) throw new Error('仅允许本机主聊天窗口');
-      try { return { ok: true, data: collectTokenHistory({ force: force === true }) }; }
+      try { return { ok: true, data: await collectTokenHistoryAsync({ force: force === true }) }; }
       catch (e) { return { ok: false, error: e.message }; }
     });
     ipcMain.handle('context-meter:sync-overlay', async (event, options) => {

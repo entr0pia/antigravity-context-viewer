@@ -417,8 +417,12 @@
     }
     applyHeatmapPalette();
     syncSwatchAndResetButtons();
-    if (activeHeatView === 'weekly') renderHeatmapWeekly();
-    else if (activeHeatView === 'cum') renderHeatmapCum();
+    if (!el('panel-tokens')?.hidden) {
+      if (activeHeatView === 'weekly') renderHeatmapWeekly();
+      else if (activeHeatView === 'cum') renderHeatmapCum();
+    } else if (typeof markHeatViewDirty === 'function') {
+      markHeatViewDirty();
+    }
   }
 
   function setCustomColor(key, value) {
@@ -481,12 +485,17 @@
     });
     applyHeatmapPalette();
     syncSwatchAndResetButtons();
-    if (activeHeatView === 'weekly') renderHeatmapWeekly();
-    else if (activeHeatView === 'cum') renderHeatmapCum();
+    if (!el('panel-tokens')?.hidden) {
+      if (activeHeatView === 'weekly') renderHeatmapWeekly();
+      else if (activeHeatView === 'cum') renderHeatmapCum();
+    } else if (typeof markHeatViewDirty === 'function') {
+      markHeatViewDirty();
+    }
     syncNativeOverlayTheme();
   }
 
-  function syncNativeOverlayTheme() {
+  let lastOverlayThemeKey = '';
+  function syncNativeOverlayTheme(force = false) {
     try {
       if (typeof window === 'undefined') return;
       const isLight = resolveTheme() === 'light';
@@ -494,6 +503,9 @@
       const cs = (rootEl && typeof window.getComputedStyle === 'function') ? window.getComputedStyle(rootEl) : null;
       const bg = cs?.getPropertyValue?.('--background')?.trim() || (isLight ? '#FAFAFA' : '#131313');
       const fg = cs?.getPropertyValue?.('--foreground')?.trim() || (isLight ? '#383A42' : '#FAFAFA');
+      const nextKey = `${bg}|${fg}`;
+      if (!force && nextKey === lastOverlayThemeKey) return;
+      lastOverlayThemeKey = nextKey;
       if (typeof window.contextMeterAPI?.syncOverlay === 'function') {
         void window.contextMeterAPI.syncOverlay({ color: bg, symbolColor: fg, heightCssPx: 40 });
       } else if (typeof window.electronNative?.setTitleBarOverlay === 'function') {

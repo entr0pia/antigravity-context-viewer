@@ -4,15 +4,28 @@
   let resizeObserver = null;
   let hostDomObserver = null;
   let observedTitlebar = null;
+  let cachedTitlebar = null;
   let layoutRaf = 0;
 
   function findHostTitlebar() {
     try {
+      if (cachedTitlebar && cachedTitlebar.isConnected) return cachedTitlebar;
       if (typeof document.querySelector !== 'function') return null;
-      return document.querySelector('[class*="@container/titlebar"]');
+      cachedTitlebar = document.querySelector('[class*="@container/titlebar"]');
+      return cachedTitlebar;
     } catch {
       return null;
     }
+  }
+
+  function isHostProperlyDocked() {
+    return Boolean(
+      host.isConnected &&
+      host.getAttribute('data-dock') === 'flow' &&
+      cachedTitlebar &&
+      cachedTitlebar.isConnected &&
+      cachedTitlebar.contains?.(host)
+    );
   }
 
   function findTopRightCluster() {
@@ -140,7 +153,6 @@
 
   function ensureHostDocked() {
     if (state.disposed) return;
-    syncWindowControlsOverlay();
     const titlebar = findHostTitlebar();
     if (titlebar) {
       // 自愈保护：若主对话区（div.flex[style*="min-width"]）的 inline flex-grow 被意外清空，立即恢复为 1，绝不覆写其他分栏属性
@@ -166,13 +178,15 @@
           targetContainer.appendChild(host);
         }
       }
-      host.setAttribute('data-dock', 'flow');
-      try {
-        host.style.removeProperty?.('right');
-        host.style.removeProperty?.('top');
-      } catch {}
-      host.style.right = '';
-      host.style.top = '';
+      if (host.getAttribute('data-dock') !== 'flow') host.setAttribute('data-dock', 'flow');
+      if (host.style.right) {
+        try { host.style.removeProperty?.('right'); } catch {}
+        host.style.right = '';
+      }
+      if (host.style.top) {
+        try { host.style.removeProperty?.('top'); } catch {}
+        host.style.top = '';
+      }
 
       if (observedTitlebar !== titlebar) {
         observedTitlebar = titlebar;
@@ -185,11 +199,12 @@
         } catch {}
       }
     } else {
+      cachedTitlebar = null;
       const fallbackParent = document.body || document.documentElement;
       if (fallbackParent && host.parentElement !== fallbackParent) {
         fallbackParent.appendChild(host);
       }
-      host.setAttribute('data-dock', 'fixed');
+      if (host.getAttribute('data-dock') !== 'fixed') host.setAttribute('data-dock', 'fixed');
       updateFixedFallbackPosition();
     }
     updateResponsiveLayout();
@@ -328,7 +343,9 @@
     if (!nextMode) return;
     const prev = state.layoutMode;
     state.layoutMode = nextMode;
-    host.setAttribute('data-layout', nextMode);
+    if (host.getAttribute('data-layout') !== nextMode) {
+      host.setAttribute('data-layout', nextMode);
+    }
     if (prev !== nextMode) {
       if (nextMode !== 'minimal') {
         const om = el('overflow-menu');
@@ -477,21 +494,24 @@
 
   try {
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => updateResponsiveLayout());
+      resizeObserver = new ResizeObserver(() => scheduleLayoutSync());
       if (document.body) resizeObserver.observe(document.body);
     }
     if (typeof MutationObserver !== 'undefined' && document.body) {
       hostDomObserver = new MutationObserver(() => {
-        if (!host.isConnected || host.getAttribute('data-dock') !== 'flow' || !findHostTitlebar()?.contains?.(host)) {
-          scheduleLayoutSync();
-        }
+        // 快速路径：宿主与 titlebar 均正常挂载时直接 O(1) 返回，避免流式输出期间频繁遍历 DOM 树
+        if (isHostProperlyDocked()) return;
+        scheduleLayoutSync();
       });
       hostDomObserver.observe(document.body, { childList: true, subtree: true });
     }
   } catch {}
 
-  const onWindowResize = () => updateResponsiveLayout();
-  const onWindowFocus = () => host.setAttribute('data-window-active', 'true');
+  const onWindowResize = () => scheduleLayoutSync();
+  const onWindowFocus = () => {
+    host.setAttribute('data-window-active', 'true');
+    if (state.route && !state.requestBusy) state.requestNext = Math.min(state.requestNext, Date.now() + 800);
+  };
   const onWindowBlur = () => host.setAttribute('data-window-active', 'false');
   try {
     window.addEventListener?.('resize', onWindowResize);
