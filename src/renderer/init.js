@@ -67,10 +67,11 @@
   const token = value => value == null ? '未提供' : `${fmt(value)} tokens`;
   const state = {
     route: null, count: 0, latest: null, requestAt: 0, requestError: '',
-    requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0,
+    requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanPending: true,
     scanError: '', scan: null, generation: 0, controllers: new Set(),
     disposed: false, layoutMode: 'wide', tooltipOpen: false, prevSpeed: null, currSpeed: null, speedHistory: [],
-    lastScannedCount: -1, lastScannedActual: null, lastScanAt: 0, idlePolls: 0, lastPollSig: ''
+    lastScannedCount: -1, lastScannedActual: null, lastScanAt: 0, idlePolls: 0, lastPollSig: '',
+    lastPollDelay: 3000, windowFocused: typeof document.hasFocus === 'function' ? document.hasFocus() : true
   };
   const route = () => location.pathname.match(/^\/c\/([a-f\d-]{36})(?:\/|$)/i)?.[1] || null;
   let activeHeatView = 'daily';

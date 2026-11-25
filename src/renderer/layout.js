@@ -508,15 +508,30 @@
   } catch {}
 
   const onWindowResize = () => scheduleLayoutSync();
-  const onWindowFocus = () => {
-    host.setAttribute('data-window-active', 'true');
-    if (state.route && !state.requestBusy) state.requestNext = Math.min(state.requestNext, Date.now() + 800);
+  const wakePolling = (delayMs = 500) => {
+    state.idlePolls = 0;
+    if (state.route && !state.requestBusy) state.requestNext = Math.min(state.requestNext, Date.now() + delayMs);
   };
-  const onWindowBlur = () => host.setAttribute('data-window-active', 'false');
+  const onWindowFocus = () => {
+    state.windowFocused = true;
+    host.setAttribute('data-window-active', 'true');
+    wakePolling(500);
+  };
+  const onWindowBlur = () => {
+    state.windowFocused = false;
+    host.setAttribute('data-window-active', 'false');
+  };
+  const onVisibilityChange = () => {
+    if (!document.hidden) {
+      state.windowFocused = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+      wakePolling(500);
+    }
+  };
   try {
     window.addEventListener?.('resize', onWindowResize);
     window.addEventListener?.('focus', onWindowFocus);
     window.addEventListener?.('blur', onWindowBlur);
+    document.addEventListener?.('visibilitychange', onVisibilityChange);
     navigator?.windowControlsOverlay?.addEventListener?.('geometrychange', onWindowResize);
   } catch {}
 

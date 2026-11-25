@@ -50,6 +50,10 @@
       bTokens.setAttribute('aria-expanded', 'false');
       syncHostStackingElevation(true);
       positionFloatingPanels();
+      if (state.route && !state.requestBusy && Date.now() - state.requestAt >= 5000) {
+        state.idlePolls = 0;
+        state.requestNext = Math.min(state.requestNext, Date.now());
+      }
     } else {
       pContext.hidden = true;
       pTokens.hidden = true;
@@ -235,6 +239,11 @@
     }
   };
   const escape = e => {
+    if (e.key === 'Enter' && !e.shiftKey && state.route && !state.disposed) {
+      state.idlePolls = 0;
+      if (!state.requestBusy) state.requestNext = Math.min(state.requestNext, Date.now() + 1500);
+      return;
+    }
     if (e.key === 'Escape') {
       const pop = el('color-picker-popover');
       if (pop && !pop.hidden) {

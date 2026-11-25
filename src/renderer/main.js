@@ -62,7 +62,8 @@
     }
 
     const d = state.latest, session = state.scan?.session;
-    const stale = state.requestError || state.requestAt && Date.now() - state.requestAt > 20000;
+    const staleThreshold = Math.max(20000, (state.lastPollDelay || 3000) * 2 + 10000);
+    const stale = state.requestError || state.requestAt && Date.now() - state.requestAt > staleThreshold;
     const incomplete = session?.unknownFiles > 0;
     const danger = d?.exceeded || d?.error;
 
@@ -271,6 +272,14 @@
     el('refresh').disabled = state.scanBusy;
   }
 
+  function computePollDelay() {
+    if (document.hidden) return 60000;
+    if (!state.windowFocused) return state.idlePolls >= 3 ? 60000 : 20000;
+    if (state.idlePolls >= 8) return 30000;
+    if (state.idlePolls >= 3) return 10000;
+    return 3000;
+  }
+
   async function requestPoll(generation, id) {
     state.requestBusy = true;
     const controller = new AbortController(); state.controllers.add(controller);
@@ -310,9 +319,12 @@
         const hadPrevSig = state.lastPollSig !== '';
         state.lastPollSig = pollSig;
         state.idlePolls = 0;
-        // 检测到新一轮对话输出变化时，允许按需触发全量扫描（最小间隔 15s）与历史同步
-        if (hadPrevSig && !state.scanBusy && Date.now() - state.lastScanAt >= 15000) {
-          state.scanNext = Math.min(state.scanNext, Date.now());
+        // 检测到新一轮对话输出变化时，标记按需触发全量扫描（最小间隔 15s）与历史同步
+        if (hadPrevSig) {
+          state.scanPending = true;
+          if (!state.scanBusy) {
+            state.scanNext = Math.min(state.scanNext, Math.max(state.lastScanAt + 15000, Date.now()));
+          }
         }
         if (hadPrevSig && Date.now() - lastHistorySync >= 15000) {
           lastHistorySync = Date.now();
@@ -327,7 +339,8 @@
       state.controllers.delete(controller);
       if (generation === state.generation && !state.disposed) {
         state.requestBusy = false;
-        const nextDelay = document.hidden ? 20000 : (state.idlePolls >= 3 ? 6000 : 3000);
+        const nextDelay = computePollDelay();
+        state.lastPollDelay = nextDelay;
         state.requestNext = Date.now() + nextDelay;
         render();
       }
@@ -336,6 +349,7 @@
 
   async function scan(generation, id, force = false) {
     state.scanBusy = true; render();
+    let succeeded = false;
     try {
       let result;
       if (window.contextMeterAPI?.scan) result = await window.contextMeterAPI.scan(id, force);
@@ -347,6 +361,7 @@
       } else throw new Error('完整重启 Antigravity 后启用附件扫描');
       if (generation !== state.generation || state.disposed) return;
       if (!result?.ok) throw new Error(result?.error || '扫描未返回有效结果');
+      succeeded = true;
       state.scan = result.data; state.scanError = '';
       state.lastScannedCount = state.count;
       state.lastScannedActual = state.latest?.actual ?? null;
@@ -355,7 +370,21 @@
       state.latest = withStepError(state.latest);
       renderFiles(result.data.session);
     } catch (e) { if (generation === state.generation && !state.disposed) state.scanError = e.message; }
-    finally { if (generation === state.generation && !state.disposed) { state.scanBusy = false; state.scanNext = Date.now() + (document.hidden ? 300000 : 120000); render(); } }
+    finally {
+      if (generation === state.generation && !state.disposed) {
+        state.scanBusy = false;
+        if (succeeded) {
+          // 纯变化驱动：扫描完成后空载挂机不再定时拉取全量 GetCascadeTrajectory，直到下一次 pollSig 变化或手动刷新
+          const hasNewerPoll = state.count !== state.lastScannedCount || (state.latest?.actual ?? null) !== state.lastScannedActual;
+          state.scanPending = hasNewerPoll;
+          state.scanNext = hasNewerPoll ? Math.max(state.lastScanAt + 15000, Date.now()) : Infinity;
+        } else {
+          state.scanPending = true;
+          state.scanNext = Date.now() + (document.hidden ? 300000 : 120000);
+        }
+        render();
+      }
+    }
   }
 
   let lastHistorySync = 0;
@@ -363,13 +392,13 @@
     const id = route();
     if (id !== state.route) {
       for (const controller of state.controllers) controller.abort(); state.controllers.clear(); state.generation++;
-      Object.assign(state, { route: id, count: 0, latest: null, requestAt: 0, requestError: '', requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanError: '', scan: null, prevSpeed: null, currSpeed: null, speedHistory: [], lastScannedCount: -1, lastScannedActual: null, lastScanAt: 0, idlePolls: 0, lastPollSig: '' }); toggle(false); hideContextTooltip(); renderFiles(null); render();
+      Object.assign(state, { route: id, count: 0, latest: null, requestAt: 0, requestError: '', requestBusy: false, requestNext: 0, scanBusy: false, scanNext: 0, scanPending: true, scanError: '', scan: null, prevSpeed: null, currSpeed: null, speedHistory: [], lastScannedCount: -1, lastScannedActual: null, lastScanAt: 0, idlePolls: 0, lastPollSig: '', lastPollDelay: 3000 }); toggle(false); hideContextTooltip(); renderFiles(null); render();
       lastHistorySync = Date.now();
       void syncTokenHistoryFromHost(false);
     }
     if (id && !state.requestBusy && Date.now() >= state.requestNext) void requestPoll(state.generation, id);
-    if (id && !state.scanBusy && Date.now() >= state.scanNext) void scan(state.generation, id);
-    const histInterval = document.hidden ? 180000 : 60000;
+    if (id && state.scanPending && !state.scanBusy && Date.now() >= state.scanNext) void scan(state.generation, id);
+    const histInterval = document.hidden || !state.windowFocused || state.idlePolls >= 8 ? 300000 : 120000;
     if (Date.now() - lastHistorySync > histInterval) {
       lastHistorySync = Date.now();
       void syncTokenHistoryFromHost(false);
@@ -411,7 +440,7 @@
       applyLayoutMode(next);
       return state.layoutMode;
     },
-    snapshot: () => ({ route: state.route, count: state.count, latest: state.latest, scan: state.scan, requestError: state.requestError, scanError: state.scanError, scanBusy: state.scanBusy, layoutMode: state.layoutMode }),
+    snapshot: () => ({ route: state.route, count: state.count, latest: state.latest, scan: state.scan, requestError: state.requestError, scanError: state.scanError, scanBusy: state.scanBusy, layoutMode: state.layoutMode, idlePolls: state.idlePolls, lastPollDelay: state.lastPollDelay, scanPending: state.scanPending, scanNext: state.scanNext }),
     dispose() {
       state.disposed = true;
       for (const controller of state.controllers) controller.abort();
@@ -425,6 +454,7 @@
         window.removeEventListener?.('resize', onWindowResize);
         window.removeEventListener?.('focus', onWindowFocus);
         window.removeEventListener?.('blur', onWindowBlur);
+        document.removeEventListener?.('visibilitychange', onVisibilityChange);
         window.removeEventListener?.('mousemove', onPointerMove);
         window.removeEventListener?.('mouseup', onPointerUp);
         navigator?.windowControlsOverlay?.removeEventListener?.('geometrychange', onWindowResize);

@@ -4,7 +4,7 @@ const fs = require('node:fs'), vm = require('node:vm'), core = require('../src/m
 try { require('../scripts/build').build(); } catch {}
 const source = fs.readFileSync(require('node:path').join(__dirname, '..', 'dist', 'meter-renderer.js'), 'utf8');
 function session(unknown = 0) { return { groups: Object.fromEntries(['user','assistant','thinking','tools','summaries','system','definitions'].map(k => [k,core.empty()])), total: { chars: 100, low: 10, high: 50 }, attachmentTotal: core.empty(), attachments: unknown ? [{ name: '<img onerror=bad>', status: 'unknown', unknownParts: ['图像 token 未知'], chars: 0, source: 'user' }] : [], unknownFiles: unknown, steps: 10, userMessages: 2, assistantMessages: 3 }; }
-function harness(scanSession = session()) {
+function harness(scanSession = session(), opts = {}) {
   const elements = new Map();
   const listeners = new Map();
   const element = () => {
@@ -37,11 +37,39 @@ function harness(scanSession = session()) {
   };
   const host = element(); host.attachShadow = () => ({ set innerHTML(value) {}, getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); } });
   const pending = [], scans = [], timers = [];
-  const sandbox = { location: { protocol: 'https:', hostname: '127.0.0.1', pathname: '/c/11111111-1111-1111-1111-111111111111' }, document: { createElement: () => element(), documentElement: { appendChild() {} }, addEventListener() {}, removeEventListener() {}, hidden: false }, window: { __APP_CONFIG__: { csrfToken: 'test' }, contextMeterAPI: { scan: id => new Promise(resolve => scans.push({ id, resolve })) } }, __AGContextMeterCore: core, AbortController, Date, setTimeout: () => 1, clearTimeout() {}, setInterval(callback) { timers.push(callback); return 1; }, clearInterval() {}, fetch(url, options) { return new Promise(resolve => pending.push({ url, options, resolve })); } };
+  const docListeners = new Map();
+  const winListeners = new Map();
+  let ClockDate = Date;
+  if (typeof opts.now === 'function') {
+    ClockDate = class extends Date {
+      constructor(...args) { super(...(args.length ? args : [opts.now()])); }
+      static now() { return opts.now(); }
+    };
+  }
+  const sandbox = {
+    location: { protocol: 'https:', hostname: '127.0.0.1', pathname: '/c/11111111-1111-1111-1111-111111111111' },
+    document: {
+      createElement: () => element(),
+      documentElement: { appendChild() {} },
+      addEventListener(type, fn) { docListeners.set(type, fn); },
+      removeEventListener(type) { docListeners.delete(type); },
+      hidden: false
+    },
+    window: {
+      __APP_CONFIG__: { csrfToken: 'test' },
+      contextMeterAPI: { scan: id => new Promise(resolve => scans.push({ id, resolve })) },
+      addEventListener(type, fn) { winListeners.set(type, fn); },
+      removeEventListener(type) { winListeners.delete(type); }
+    },
+    __AGContextMeterCore: core, AbortController, Date: ClockDate,
+    setTimeout: () => 1, clearTimeout() {},
+    setInterval(callback) { timers.push(callback); return 1; }, clearInterval() {},
+    fetch(url, options) { return new Promise(resolve => pending.push({ url, options, resolve })); }
+  };
   // First createElement call is the host; later calls are safe text-only file rows.
   let first = true; sandbox.document.createElement = () => { if (first) { first = false; return host; } return element(); };
   vm.createContext(sandbox); vm.runInContext(source, sandbox);
-  return { sandbox, host, pending, scans, elements, tick: () => timers[0](), flush: () => new Promise(resolve => setImmediate(resolve)), finishScan(i = 0) { scans[i].resolve({ ok: true, data: { session: scanSession, scannedAt: Date.now(), latest: null } }); } };
+  return { sandbox, host, pending, scans, elements, docListeners, winListeners, tick: () => timers[0](), flush: () => new Promise(resolve => setImmediate(resolve)), finishScan(i = 0) { scans[i].resolve({ ok: true, data: { session: scanSession, scannedAt: ClockDate.now(), latest: null } }); } };
 }
 function response(chatModel) { return { ok: true, json: async () => ({ generatorMetadata: [{ chatModel }] }) }; }
 test('late old request and old full-scan responses cannot contaminate a newly selected chat', async () => {
@@ -709,6 +737,82 @@ test('performance: syncOverlay IPC deduplicates unchanged theme colors across re
   // Switching to dark emits one new syncOverlay call
   api.setTheme('dark');
   assert.equal(syncCalls, afterLight + 1);
+
+  api.dispose();
+});
+
+test('performance: idle polling backs off to 10s/30s/60s without false stale warnings and skips idle full scans', async () => {
+  let now = 1_700_000_000_000;
+  const h = harness(session(), { now: () => now });
+  const api = h.sandbox.__AGContextMeter;
+  const sameMeta = () => response({
+    usage: { inputTokens: 12000, outputTokens: 500 },
+    chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 256000 } }
+  });
+
+  // Initial poll + initial full scan
+  h.pending[0].resolve(sameMeta());
+  h.finishScan(0);
+  await h.flush();
+  assert.equal(h.scans.length, 1);
+  assert.equal(api.snapshot().lastPollDelay, 3000);
+  assert.equal(api.snapshot().scanPending, false);
+  assert.equal(api.snapshot().scanNext, Infinity);
+
+  // 3 idle polls -> backs off to 10s
+  for (let i = 0; i < 3; i++) {
+    now += 4000;
+    h.tick();
+    h.pending[h.pending.length - 1].resolve(sameMeta());
+    await h.flush();
+  }
+  assert.equal(api.snapshot().idlePolls, 3);
+  assert.equal(api.snapshot().lastPollDelay, 10000);
+
+  // 5 more idle polls (total 8) -> backs off to 30s
+  for (let i = 0; i < 5; i++) {
+    now += 11000;
+    h.tick();
+    h.pending[h.pending.length - 1].resolve(sameMeta());
+    await h.flush();
+  }
+  assert.equal(api.snapshot().idlePolls, 8);
+  assert.equal(api.snapshot().lastPollDelay, 30000);
+
+  // Even after 35s (> old 20s stale limit) during 30s backoff, UI must NOT falsely report stale
+  now += 35000;
+  h.tick();
+  assert.doesNotMatch(h.elements.get('amount').textContent, /统计延迟/);
+  h.pending[h.pending.length - 1].resolve(sameMeta());
+  await h.flush();
+
+  // Hidden tab -> backs off to 60s; still ZERO extra full scans across long idle period
+  h.sandbox.document.hidden = true;
+  now += 35000;
+  h.tick();
+  h.pending[h.pending.length - 1].resolve(sameMeta());
+  await h.flush();
+  assert.equal(api.snapshot().lastPollDelay, 60000);
+  assert.equal(h.scans.length, 1);
+
+  // Window refocus wakes polling back to active
+  h.sandbox.document.hidden = false;
+  h.winListeners.get('focus')?.();
+  assert.equal(api.snapshot().idlePolls, 0);
+
+  // New conversation output (usage changes) triggers on-demand full scan and resets delay to 3s
+  now += 2000;
+  h.tick();
+  h.pending[h.pending.length - 1].resolve(response({
+    usage: { inputTokens: 25000, outputTokens: 800 },
+    chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 256000 } }
+  }));
+  await h.flush();
+  assert.equal(api.snapshot().lastPollDelay, 3000);
+  assert.equal(api.snapshot().scanPending, true);
+  now += 16000;
+  h.tick();
+  assert.equal(h.scans.length, 2);
 
   api.dispose();
 });
